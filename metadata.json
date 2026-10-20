@@ -1,0 +1,6 @@
+{
+  "name": "Gara Săn Bão",
+  "description": "Game 3D quản lý gara xe săn bão chuyên nghiệp - nâng cấp xưởng, sửa chữa xe và đối đầu với siêu bão.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

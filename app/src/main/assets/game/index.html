@@ -1,0 +1,1431 @@
+<!-- INKWAVE-inspired adaptation: procedural wet paint / splat feedback concepts. INKWAVE repo: https://github.com/amiaoapp/inkwave (MIT). This game remains a separate garage tycoon project. -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>GARA SĂN BÃO v6.3 UNIFIED WORKSHOP — Storm Chasers</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<style>
+:root{--bg:#0b121b;--panel:#14212eeb;--line:#ffffff25;--muted:#b3c2d0;--green:#39c982;--blue:#3878c8}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9bcde8;color:#f4f8fc;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;touch-action:pan-x pan-y}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+#ui{position:fixed;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+.top{pointer-events:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px;background:linear-gradient(#08111be8,#08111b9c);border-bottom:1px solid #ffffff20;flex-wrap:wrap}
+.brand{font-weight:950;letter-spacing:.3px;line-height:1.1}.brand span{color:#64d8a4}.brand small{display:block;color:#9db2c5;font-size:10px;letter-spacing:2px;margin-top:4px}
+.stats,.topbuttons{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.pill{background:#182838;border:1px solid var(--line);border-radius:12px;padding:6px 9px;font-size:12px;color:#dce8f2;white-space:nowrap}.pill b{display:block;color:#fff;font-size:15px}
+.btn{border:1px solid #ffffff24;border-radius:10px;padding:8px 11px;background:#263a4c;color:#fff;font-weight:800;box-shadow:0 2px 0 #0003}.btn.green{background:linear-gradient(135deg,#54cf91,#279c69);color:#072718}.btn.red{background:#d9433d}.btn:active{transform:translateY(1px)}.btn:disabled{opacity:.45}
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(220px,290px) minmax(0,1fr) minmax(260px,310px);gap:10px;padding:10px;pointer-events:none}
+.card{pointer-events:auto;min-height:0;max-height:100%;display:flex;flex-direction:column;overflow:hidden;border:1px solid #ffffff2a;border-radius:16px;background:var(--panel);backdrop-filter:blur(10px);box-shadow:0 10px 28px #0003}
+.card h3{margin:0;padding:11px 12px;border-bottom:1px solid #ffffff1d;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.scroll{padding:9px;overflow:auto;display:flex;flex-direction:column;gap:9px;min-height:0}
+.job,.task,.upgradebox{background:#1b2c3b;border:1px solid #ffffff1d;border-radius:13px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.job h4{font-size:13px;margin:0}.mini{font-size:11px;line-height:1.45;color:#b5c5d3}.moneyrow{display:flex;gap:5px;flex-wrap:wrap}.moneyrow span{font-size:10px;border:1px solid #ffffff24;border-radius:999px;padding:4px 6px;color:#d5e0e9}
+.progress{height:8px;border-radius:99px;background:#07111a;overflow:hidden;border:1px solid #ffffff1a}.progress i{height:100%;width:0;display:block;background:linear-gradient(90deg,#31c781,#d6e95c);transition:width .12s}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}.tool{background:#1b2d3e;border:1px solid #ffffff20;color:#fff;border-radius:12px;padding:9px;text-align:left;font-size:12px}.tool small{display:inline-block;color:#b6c7d5;margin-top:4px}
+.task{padding:9px}.task.done{border-color:#39c982;opacity:.7}.taskhead{display:flex;justify-content:space-between;gap:6px;font-size:12px}
+.bottom{pointer-events:auto;display:flex;justify-content:center;gap:6px;flex-wrap:wrap;padding:0 8px calc(8px + env(safe-area-inset-bottom))}
+.hudnote{pointer-events:none;position:absolute;bottom:68px;left:50%;transform:translateX(-50%);font-size:10px;color:#fff;background:#07111bbd;border:1px solid #ffffff22;border-radius:999px;padding:6px 10px;white-space:nowrap}
+#toast{display:none;position:fixed;z-index:20;top:62px;left:50%;transform:translateX(-50%);max-width:92%;background:#111d29;border:1px solid #ffffff30;border-radius:12px;padding:10px 13px;font-size:12px;text-align:center;box-shadow:0 8px 24px #0005}
+#tut{position:fixed;z-index:30;inset:0;background:#07111bdc;display:flex;align-items:center;justify-content:center;padding:18px;pointer-events:auto}
+.tutbox{max-width:460px;width:100%;border:1px solid #ffffff2a;background:#152638;border-radius:20px;padding:20px;box-shadow:0 20px 70px #0008}.tutbox h2{margin:0 0 8px}.tutbox p,.tutbox li{font-size:13px;line-height:1.55;color:#d0dce7}
+
+/* REPAIR HUD: compact bottom panel; never auto-open the full workshop over the 3D scene */
+#bottomJob{display:none;pointer-events:auto!important;position:fixed;z-index:35;left:50%;bottom:calc(8px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(98vw,1050px);max-height:30vh;overflow:hidden;pointer-events:auto;background:rgba(12,29,44,.96);border:1px solid #ffffff35;border-radius:16px;padding:8px;box-shadow:0 10px 35px #0007;color:#f5f8fc;gap:8px;align-items:stretch}
+#bottomJob.visible{display:flex}
+.repairSummary{flex:0 0 175px;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:5px 7px;border-right:1px solid #ffffff22;font-size:12px}
+.repairSummary .repairTitle{font-weight:900;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.repairSummary .repairMeta{font-size:10px;color:#c5d4e0;line-height:1.35}
+.repairTasks{display:flex;flex:1;min-width:0;gap:6px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;align-items:stretch}
+.taskChip{flex:0 0 94px;min-width:94px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:#1b3042;border:1px solid #ffffff25;border-radius:11px;padding:7px 5px;text-align:center;font-size:10px}
+.taskChip.done{border-color:#39c982;background:#153b31}
+.taskChip .taskIcon{font-size:20px;line-height:1.1}
+.taskChip .taskName{font-weight:800;min-height:25px;display:flex;align-items:center;justify-content:center}
+.taskChip .bar{height:5px;width:100%;border-radius:99px;background:#06111a;overflow:hidden}
+.taskChip .bar i{display:block;height:100%;background:linear-gradient(90deg,#39c982,#c5e85a)}
+.taskChip .holdBtn{pointer-events:auto;position:relative;z-index:3;width:100%;min-height:38px;padding:7px 3px;border:0;border-radius:8px;background:#ff922b;color:#fff;font-size:10px;font-weight:950;touch-action:none;box-shadow:0 2px 0 #0005;user-select:none;-webkit-user-select:none}
+.taskChip .holdBtn:disabled{background:#287e58;color:#fff}
+.deliverChip{pointer-events:auto;position:relative;z-index:3;flex:0 0 100px;align-self:stretch;border:0;border-radius:12px;background:linear-gradient(145deg,#43d68c,#15985e);color:#052c1b;font-weight:950;font-size:12px;white-space:normal}
+.deliverChip:disabled{background:#405361;color:#b6c4ce}
+body.repairing .hudnote{display:none}
+body.repairing .bottom{display:none!important}
+body.repairing #rightCard.open{display:none!important}
+@media(max-width:900px){
+ #bottomJob{width:calc(100vw - 12px);bottom:calc(5px + env(safe-area-inset-bottom));max-height:28vh;padding:6px;gap:5px;border-radius:13px}
+ .repairSummary{flex-basis:112px;padding:4px;font-size:10px}
+ .repairSummary .repairTitle{font-size:11px;white-space:normal;line-height:1.2}
+ .repairSummary .repairMeta{font-size:9px}
+ .taskChip{flex-basis:82px;min-width:82px;padding:5px 4px;gap:3px}
+ .taskChip .taskIcon{font-size:17px}.taskChip .taskName{font-size:9px;min-height:23px}
+ .taskChip .holdBtn{font-size:9px;padding:8px 2px;min-height:34px}
+ .deliverChip{flex-basis:76px;font-size:10px;padding:4px}
+ .top{position:relative;z-index:9}
+ .card{top:62px;bottom:calc(36vh + env(safe-area-inset-bottom));max-height:54vh;width:calc(100% - 20px);left:10px;right:auto}
+ body.repairing .card.open{display:none!important}
+}
+
+@media(max-width:900px){
+ .top{gap:6px;padding-left:7px;padding-right:7px}.brand{font-size:13px}.brand small{font-size:8px}.stats{gap:3px}.pill{padding:5px 6px;font-size:10px}.pill b{font-size:12px}.topbuttons{gap:3px}.btn{padding:7px 8px;font-size:11px}
+ .layout{display:block;padding:0;position:relative;flex:1}.card{display:none;position:absolute;top:8px;bottom:70px;max-height:68vh;width:calc(100% - 16px);left:8px;z-index:5}.card.open{display:flex;animation:panelIn .18s ease}@keyframes panelIn{from{transform:translateY(8px);opacity:.65}to{transform:none;opacity:1}}
+ #leftCard{right:8px}.bottom{position:absolute;left:5px;right:5px;bottom:calc(6px + env(safe-area-inset-bottom));gap:5px}.bottom .btn{flex:1;min-width:0;padding:8px 5px;font-size:10px}.hudnote{bottom:51px;font-size:9px;max-width:95%;overflow:hidden}
+}
+@media(min-width:901px){.layout{padding-bottom:52px}.bottom{position:absolute;bottom:8px;left:0;right:0}}
+
+/* MOBILE TYCOON UI: bottom tabs stay visible during repairs; drawers never occupy the whole screen */
+.navDock{position:fixed!important;left:50%;transform:translateX(-50%);bottom:calc(6px + env(safe-area-inset-bottom));z-index:12;width:min(96vw,620px);display:flex!important;flex-wrap:nowrap;gap:5px;padding:6px;background:rgba(13,29,46,.96);border:1px solid #ffffff25;border-radius:18px;box-shadow:0 8px 26px #0005;pointer-events:auto}
+.navTab{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:7px 3px;border:1px solid transparent;border-radius:13px;background:#253b50;color:#eaf2f8;font-size:10px;line-height:1.1}
+.navTab span{font-size:20px;line-height:1.1}.navTab b{font-size:10px;white-space:nowrap}.navTab.active{background:linear-gradient(145deg,#4ab9d1,#246d9a);border-color:#9deaff;box-shadow:0 0 0 2px #ffffff20 inset}
+.navTab i{position:absolute;right:4px;top:2px;font-style:normal;font-size:9px;font-weight:900;background:#ff625e;color:white;border-radius:99px;padding:2px 5px}
+#bottomJob{bottom:calc(76px + env(safe-area-inset-bottom))!important;max-height:30vh!important;overflow-x:auto;overflow-y:hidden}
+body.repairing .bottom{display:flex!important}
+body.repairing .hudnote{display:none}
+body.repairing .layout .card{display:none!important}
+.card{box-sizing:border-box}
+#drawerShade{display:none;position:fixed;inset:65px 0 calc(65px + env(safe-area-inset-bottom));z-index:4;background:rgba(5,14,24,.16);pointer-events:auto}
+#drawerShade.visible{display:block}
+.card.open{z-index:7!important;top:72px!important;bottom:auto!important;left:50%!important;right:auto!important;transform:translateX(-50%);width:min(92vw,390px)!important;max-height:54vh!important;box-shadow:0 16px 42px #0007}
+.extraPanel{pointer-events:auto!important;position:fixed;z-index:40;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,430px);max-height:66vh;overflow:hidden;display:flex;flex-direction:column;background:#f8f5eb;color:#24354a;border:3px solid #dce8f4;border-radius:22px;box-shadow:0 22px 80px #0008}
+.extraHead{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid #d6dce4;font-size:17px}
+.extraHead .btn{background:#e3eaf4;color:#23384b;border-color:#c8d4e2}
+.extraContent{pointer-events:auto;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.extraCard{padding:12px;border:1px solid #d5dce5;border-radius:14px;background:white;display:flex;flex-direction:column;gap:6px}
+.extraCard p{margin:0;font-size:12px;color:#667486;line-height:1.45}
+.extraAction{pointer-events:auto;position:relative;z-index:2;border:0;border-radius:10px;padding:10px;background:#38b889;color:#073522;font-weight:900}
+.extraAction:disabled{opacity:.45}
+body.panelOpen #bottomJob{pointer-events:none}
+@media(max-width:900px){
+ .top{padding-bottom:7px}
+ .layout{display:block;position:relative;flex:1;min-height:0}
+ .card{width:min(92vw,390px)!important}
+ #bottomJob{width:calc(100vw - 10px)!important;bottom:calc(82px + env(safe-area-inset-bottom))!important;max-height:32vh!important;overflow-x:auto;overflow-y:hidden}
+ .repairSummary{flex-basis:88px!important}
+ .taskChip{flex-basis:78px!important;min-width:78px!important}
+ .deliverChip{flex-basis:70px!important}
+ .navDock{bottom:calc(5px + env(safe-area-inset-bottom));width:calc(100vw - 16px);gap:3px;padding:5px}
+ .navTab{padding:6px 2px}.navTab span{font-size:18px}.navTab b{font-size:9px}
+ .extraPanel{max-height:66vh;top:48%}
+}
+@media(min-width:901px){
+ #bottomJob{bottom:78px!important}
+ .navDock{bottom:10px}
+}
+
+
+.objectiveBanner{display:none!important;position:fixed;z-index:3;top:108px;left:12px;display:flex;align-items:center;gap:10px;max-width:min(360px,calc(100vw - 24px));padding:10px 13px;border:2px solid #e6edf4;border-radius:15px;background:#fffaf0;color:#27364b;box-shadow:0 6px 18px #0002;pointer-events:none}
+.objectiveIcon{font-size:24px}.objectiveBanner div{display:flex;flex-direction:column;gap:3px;min-width:0}.objectiveBanner b{font-size:12px}.objectiveBanner small{font-size:10px;color:#6c7788}.objectiveArrow{font-size:20px;color:#db7044}
+body.repairing .objectiveBanner{display:none}
+@media(max-width:900px){.objectiveBanner{top:104px;left:10px;max-width:calc(100vw - 20px);padding:8px 10px}.objectiveIcon{font-size:21px}.objectiveBanner b{font-size:11px}.objectiveBanner small{font-size:9px}}
+
+
+/* STORM CHASERS brand */
+.brandStorm{display:flex;align-items:center;gap:7px;min-width:0}
+.brandStorm canvas{display:block;width:74px;height:31px;border-radius:7px;flex:0 0 auto}
+.brandStorm>div{font-size:13px;white-space:nowrap}
+.brandStorm>div b{font-size:13px;font-weight:1000;letter-spacing:.1px}
+.brandStorm>div b span{color:#ff9e43}
+.brandStorm small{font-size:8px;letter-spacing:1.3px!important}
+@media(max-width:900px){.brandStorm{gap:5px}.brandStorm canvas{width:58px;height:25px}.brandStorm>div b{font-size:11px}.brandStorm small{font-size:7px;letter-spacing:.7px!important}}
+/* Keep repair actions and navigation both visible; use horizontal task chips on phones. */
+body.repairing .navDock{display:flex!important}
+body.repairing #bottomJob{bottom:calc(76px + env(safe-area-inset-bottom))!important}
+body.repairing .objectiveBanner{display:none!important}
+#drawerShade{z-index:4;pointer-events:auto}
+.card.open{z-index:7}
+
+
+/* ===== GARA SĂN BÃO v5.0 PREMIUM OVERRIDES ===== */
+:root{--green:#39d48a;--orange:#ff922b;--yellow:#ffd43b;--blue:#3aa0ff;--radius:18px;--shadow:0 14px 40px #0006}
+.top{background:linear-gradient(180deg,#081827f7,#0a1a2ac9);backdrop-filter:blur(14px);border-bottom-color:#ffffff2b}
+.pill{background:#14283bf2;border-radius:13px;box-shadow:inset 0 1px #ffffff0c}
+.btn,.tool,.navTab,.taskChip,.extraAction{transition:transform .16s ease,filter .16s ease,box-shadow .16s ease}
+.btn:active,.tool:active,.navTab:active{transform:scale(.97);filter:brightness(1.12)}
+.btn.green{background:linear-gradient(145deg,#4fe0a0,#15965c);box-shadow:0 3px 0 #063d2b,0 5px 16px #39d48a24}
+.card{background:linear-gradient(150deg,#12283aF5,#0c1d2cf5);border-color:#ffffff2a;box-shadow:0 18px 44px #0005}
+.job,.task,.upgradebox{background:linear-gradient(145deg,#1a3247,#132639);border-color:#ffffff18}
+.progress{height:9px;background:#06111b;border-color:#ffffff1a;box-shadow:inset 0 1px 3px #0008}
+.progress i{background:linear-gradient(90deg,#22c982,#83e66a,#ffe16b);box-shadow:0 0 12px #39d48a55}
+#bottomJob{background:linear-gradient(145deg,#10283bf7,#0a1928f7);border-color:#ffffff38;box-shadow:0 16px 44px #0008;backdrop-filter:blur(16px)}
+.taskChip{border-radius:14px;background:linear-gradient(145deg,#1a354b,#12283a);box-shadow:inset 0 1px #ffffff0c}
+.taskChip.active{border-color:#ffd43b;box-shadow:0 0 0 2px #ffd43b35,0 0 22px #ffd43b28;transform:translateY(-2px)}
+.taskChip.sweet .holdBtn{background:linear-gradient(145deg,#ffe66b,#ffb700);color:#402400;animation:sweetPulse .52s ease-in-out infinite alternate}
+.taskChip .holdBtn{background:linear-gradient(145deg,#ffad4d,#ff7417);box-shadow:0 3px 0 #773200,0 5px 12px #ff922b20}
+.taskChip .holdBtn:active{transform:scale(.96)}
+@keyframes sweetPulse{from{box-shadow:0 0 0 0 #ffd43b33;transform:scale(1)}to{box-shadow:0 0 0 4px #ffd43b22;transform:scale(1.035)}}
+.deliverChip{box-shadow:0 4px 0 #075c38,0 8px 20px #39d48a28;background:linear-gradient(145deg,#57ef9c,#17a566)}
+.navDock{border-radius:22px;backdrop-filter:blur(18px);background:rgba(9,25,41,.97);border-color:#ffffff2b}
+.navTab{border-radius:15px;background:#1a3148}.navTab.active{background:linear-gradient(145deg,#47c4d8,#276ba4);box-shadow:0 0 0 1px #a7f1ff inset,0 5px 18px #278db944}
+#toast{border-color:#ffffff32;backdrop-filter:blur(14px);animation:toastIn .18s ease}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,-6px)}to{opacity:1;transform:translate(-50%,0)}}
+#rewardBanner{border:1px solid #fff9;animation:rewardIn .3s cubic-bezier(.2,1.4,.4,1)}
+@keyframes rewardIn{from{opacity:0;transform:translate(-50%,-14px) scale(.88)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+.quality{font:800 10px system-ui;border:1px solid #ffffff2b;border-radius:10px;padding:6px 7px;background:#14283bf2;color:#eaf5ff;max-width:86px}
+#sweetHint{font-size:9px;font-weight:900;color:#ffe27a;letter-spacing:.2px}
+@media(max-width:900px){.quality{max-width:74px;padding:5px 4px}.topbuttons .btn{padding:6px 8px}}
+body.quality-low .card{backdrop-filter:none;box-shadow:0 6px 14px #0004}
+body.quality-low .taskChip.active{box-shadow:0 0 0 1px #39d48a55}
+body.quality-low #bottomJob{backdrop-filter:none}
+body.quality-high .card{box-shadow:0 18px 50px #0006,0 0 0 1px #ffffff08 inset}
+
+
+/* V5.2 VISIBLE OVERHAUL — refreshed garage HUD, stronger storm-chaser identity */
+:root{--bg:#07111b;--panel:#0b1b2af2;--line:#35d7ef55;--muted:#b8d2df;--green:#55f0a6;--blue:#16bde0}
+body{background:#07111b}
+.top{background:linear-gradient(100deg,#06101df7 0%,#102c40ed 55%,#251b2bf0 100%);border-bottom:2px solid #22d5ed80;box-shadow:0 8px 30px #0007;padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:10px}
+.brand{display:flex;align-items:center;gap:9px}.brand canvas{width:74px!important;height:40px!important;object-fit:contain;filter:drop-shadow(0 0 10px #19d9f577)}
+.brand>div{font-size:16px;letter-spacing:1px}.brand span{color:#ff9a43}.brand small{color:#8ddcea;letter-spacing:1.2px;font-size:9px}.editionTag{font-style:normal;color:#ffbd68;border:1px solid #ff9a4366;border-radius:4px;padding:2px 4px;margin-left:4px;font-size:8px}
+.pill{background:linear-gradient(145deg,#142f43,#0a1b2b);border:1px solid #30d4ed66;border-radius:9px;box-shadow:inset 0 1px #ffffff10}.pill b{color:#74f3ff}
+.btn{border-radius:9px;border:1px solid #53dff066;background:linear-gradient(145deg,#18364b,#0b1d2d);box-shadow:0 3px 0 #020a12,0 0 12px #10cbe611}.btn.green{background:linear-gradient(135deg,#b8ff72,#39e7a0);border-color:#b5ffb9;color:#05271d;box-shadow:0 3px 0 #126342,0 0 20px #3bf5a333}
+.card{background:linear-gradient(155deg,#0d2638f5,#071522f7 80%);border:1px solid #29d7ed77;border-radius:13px;box-shadow:0 15px 40px #0008,0 0 0 1px #12cbe011 inset;backdrop-filter:blur(14px)}
+.card h3{background:linear-gradient(90deg,#12364a,#0b1c2c);border-bottom:1px solid #2bd5ec55;color:#c5f7ff;letter-spacing:.5px;padding:13px 12px}
+.job,.task,.upgradebox{background:linear-gradient(135deg,#112d40,#0a1c2b);border:1px solid #36cde544;border-radius:10px}.job h4{color:#f2fbff}.tool{background:linear-gradient(145deg,#12374a,#0a1c2c);border:1px solid #32d5ed66;border-radius:10px}.tool b{color:#d8faff}.tool small{color:#77b9cc}
+.objectiveBanner{top:116px;background:linear-gradient(100deg,#fff4dbf5,#ffe2b8f5);border:2px solid #ff9c43;border-radius:10px;box-shadow:0 5px 0 #7a361d55,0 0 28px #ff9b3733;color:#2b2020}.objectiveArrow{color:#f36c22}
+.stormStatus{position:fixed;z-index:4;top:calc(76px + env(safe-area-inset-top));right:12px;display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #35d9ed70;border-radius:7px;background:#061522e8;color:#bceef7;font-size:9px;font-weight:900;letter-spacing:.8px;box-shadow:0 4px 18px #0006;pointer-events:none}.stormStatus strong{color:#ff9952;font-size:8px}.liveDot{width:7px;height:7px;border-radius:50%;background:#ff7b43;box-shadow:0 0 10px #ff7b43;animation:stormBlink 1s infinite alternate}@keyframes stormBlink{to{opacity:.35;transform:scale(.7)}}
+#bottomJob{background:linear-gradient(120deg,#071725fa,#123349fa);border:1px solid #3adcf0a0;border-top:3px solid #ff9744;border-radius:12px;box-shadow:0 16px 42px #000a,0 0 24px #17cde91c}.taskChip{background:linear-gradient(145deg,#16394d,#0b2030);border:1px solid #3bd3e655;border-radius:9px}.taskChip .holdBtn{background:linear-gradient(145deg,#ffb45d,#ff6a2d);color:#241107}.taskChip.done{background:linear-gradient(145deg,#104c3c,#0c2b29);border-color:#55f0a6}
+.navDock{background:linear-gradient(180deg,#0b2031fa,#06121ffa);border:1px solid #39d7ed66;border-radius:15px 15px 0 0;box-shadow:0 -8px 30px #0006}.navTab{background:#102c40;border:1px solid #2cd0e433;border-radius:9px}.navTab.active{background:linear-gradient(145deg,#ffb25e,#ff7138);color:#251307;box-shadow:0 0 0 1px #ffe0b7 inset,0 0 18px #ff853b45}.navTab.active *{color:#251307}
+.hudnote{background:#061522e8;border:1px solid #30d7ed66;color:#bdf6ff;box-shadow:0 4px 18px #0005}
+.tutbox{background:linear-gradient(145deg,#102d40,#071522);border:1px solid #35d7ed88;border-top:4px solid #ff9744;border-radius:14px;box-shadow:0 22px 90px #000b}.tutbox h2{color:#fff0d6}.tutbox b{color:#ffbd77}
+@media(max-width:900px){.brand canvas{display:none!important}.brand>div{font-size:13px}.brand small{font-size:8px}.stormStatus{top:calc(72px + env(safe-area-inset-top));right:8px;padding:5px 7px;font-size:8px}.objectiveBanner{top:108px;max-width:calc(100vw - 16px);left:8px}.stats{gap:4px}.pill{padding:5px 6px;font-size:10px}.pill b{font-size:13px}}
+
+
+/* INKWAVE-inspired wet-paint feedback: glossy spray, splat particles and live repair status */
+.inkwaveBadge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:linear-gradient(110deg,#00d9c5,#49a6ff);color:#06202b;font-size:10px;font-weight:1000;letter-spacing:.08em;box-shadow:0 0 18px #00d9c544}
+.inkwaveBadge i{width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;animation:inkPulse .7s infinite alternate}
+@keyframes inkPulse{to{opacity:.35;transform:scale(.65)}}
+#inkwaveNotice{position:fixed;z-index:30;top:calc(78px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:8px 13px;border-radius:999px;background:#071d2ce8;border:1px solid #26e4e0;color:#dffffd;font-size:11px;font-weight:900;letter-spacing:.04em;box-shadow:0 0 22px #00d9c533;pointer-events:none;opacity:0;transition:opacity .18s;white-space:nowrap}
+#inkwaveNotice.show{opacity:1}
+@media(max-width:650px){#inkwaveNotice{top:calc(54px + env(safe-area-inset-top));font-size:10px}}
+
+/* v5.4: task board and unlock garage become a real progression screen */
+.extraContent{gap:12px}
+.extraCard{border:1px solid #35d7ef55!important;background:linear-gradient(145deg,#112d40,#081824)!important;border-radius:15px!important;padding:14px!important;box-shadow:0 8px 24px #0003}
+.questHero{padding:15px;border-radius:16px;background:radial-gradient(circle at 90% 0%,#2a8496 0,#11354a 38%,#091927 100%);border:1px solid #39e5f1;color:#f3fdff;box-shadow:0 10px 30px #0005}
+.questHero .qBig{font-size:25px;font-weight:1000;letter-spacing:.04em}.questHero p{margin:6px 0;color:#bde8f2;font-size:12px;line-height:1.5}
+.missionCard{position:relative;overflow:hidden;border:1px solid #ffffff24;border-radius:15px;padding:13px;background:linear-gradient(135deg,#162f43,#0a1a28);display:grid;grid-template-columns:42px 1fr;gap:10px;box-shadow:0 8px 22px #0003}
+.missionIcon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#153f51;font-size:24px;border:1px solid #4bd9ec55}.missionCard h4{margin:0 0 4px;font-size:14px;color:#fff}.missionCard p{margin:0 0 8px;font-size:11px;line-height:1.45;color:#aac4d2}.missionMeta{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#d7f4fb;font-weight:850}.missionCard .progress{margin:7px 0}.missionCard button{grid-column:1/-1}
+.modelGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.modelCard{min-width:0;position:relative;border:1px solid #36cfe955;border-radius:14px;padding:11px;background:linear-gradient(145deg,#17364b,#091b2a);overflow:hidden}.modelCard.unlocked{border-color:#49edb1;box-shadow:inset 0 0 0 1px #49edb122}.modelCard.locked{filter:saturate(.45)}.modelArt{height:74px;border-radius:10px;display:grid;place-items:center;font-size:42px;background:radial-gradient(ellipse at 50% 100%,#286078,#0b1b29 70%);margin-bottom:9px;text-shadow:0 5px 12px #000}.modelCard b{display:block;font-size:12px}.modelCard small{display:block;color:#a9c8d6;font-size:10px;line-height:1.45;margin-top:4px}.modelStatus{display:inline-block;margin-top:8px;border-radius:99px;padding:4px 7px;font-size:9px;font-weight:1000;background:#18394a;color:#c6faff}.modelCard.unlocked .modelStatus{background:#174a3c;color:#7affc8}
+@media(max-width:650px){.modelGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.navTab{padding-left:2px!important;padding-right:2px!important}.navTab b{font-size:9px!important}}
+
+/* v5.6 FIX: crew panels readable on mobile; light premium contrast */
+.extraPanel{background:#fff!important;color:#1e2f44!important;border-color:#dbe6f2!important}
+.extraHead{background:#f1f6fb!important;border-bottom:1px solid #dbe6f2!important;color:#1a2d44!important}
+.extraCard{background:#f8fafb!important;border:1px solid #dbe6f2!important;color:#1e2f44!important;box-shadow:0 5px 16px #19364b12!important}
+.extraCard p{color:#4a5f78!important}.extraAction{background:linear-gradient(145deg,#4fd89b,#1d9f63)!important;color:#06261a!important}
+#crewPanel .tool{background:#fff!important;border:1px solid #dbe6f2!important;color:#1e2f44!important}
+#crewPanel .tool small{color:#5b6f84!important}
+.crewWorkerCard{background:#fff;border:1px solid #e2eaf2;border-radius:14px;padding:10px;display:flex;gap:10px;align-items:center}
+.crewWorkerCard b{color:#1a2d44}.crewWorkerCard small{color:#6b7f96}.fatigueBar{height:8px;background:#eef3f8;border-radius:99px;overflow:hidden;border:1px solid #dbe6f2}.fatigueBar i{display:block;height:100%;background:linear-gradient(90deg,#39d48a,#ffb020);transition:width .3s}
+
+
+/* v5.7 readability and visible crew model upgrade */
+#crewPanel,.extraPanel #crewPanel{background:#fff!important;color:#1e2f44!important}
+#crewPanel h3,#crewPanel b,#crewPanel strong,#crewPanel label{color:#1e2f44!important}
+#crewPanel p,#crewPanel small,#crewPanel .mini{color:#50657b!important}
+#crewPanel .tool{background:#f8fafc!important;color:#1e2f44!important;border:1px solid #dbe6f2!important}
+
+/* v6.2 busy workshop refinements */
+.job .moneyrow{gap:8px;flex-wrap:wrap}
+#extraContent .job{box-shadow:0 4px 14px #10243812}
+
+
+/* v6.3 UNIFIED WORKSHOP — one consistent visual language for all workshop panels */
+:root{--shop-ink:#1d3043;--shop-muted:#62768a;--shop-border:#d7e2ed;--shop-card:#ffffff;--shop-soft:#f3f7fb;--shop-green:#2eaa70;--shop-gold:#d89a27}
+#rightCard{background:linear-gradient(160deg,rgba(14,34,51,.98),rgba(8,23,36,.98));border:1px solid #6b9ab2;border-radius:18px;box-shadow:0 16px 38px #06142170}
+#rightCard>h3{min-height:52px;background:linear-gradient(100deg,#16384c,#10283b);color:#eaf8ff;font-size:14px;letter-spacing:.35px;border-bottom:1px solid #42687e;padding:12px 14px}
+#rightCard .scroll{padding:11px;gap:11px;scrollbar-width:thin;scrollbar-color:#52778d #10283a}
+#rightCard .scroll>.job{background:#f7f9fc!important;color:var(--shop-ink)!important;border:1px solid var(--shop-border)!important;border-radius:15px!important;padding:13px!important;gap:9px;box-shadow:0 4px 13px #020d171b}
+#rightCard .scroll>.job>b,#rightCard .scroll>.job>h4{color:var(--shop-ink)!important;font-size:14px}
+#rightCard .scroll>.job .mini{color:var(--shop-muted)!important}
+#rightCard .progress{background:#e7eef5;border-color:#d6e1eb}
+#rightCard .grid2{gap:8px}
+#rightCard .tool{min-height:72px;background:linear-gradient(145deg,#fff,#f2f7fb)!important;color:var(--shop-ink)!important;border:1px solid var(--shop-border)!important;border-radius:13px;padding:11px;text-align:left;box-shadow:0 3px 9px #081a2a0c}
+#rightCard .tool b{font-size:12px;color:var(--shop-ink)}
+#rightCard .tool small{color:var(--shop-muted)!important;font-size:11px;line-height:1.4}
+#rightCard .tool:active{transform:scale(.985)}
+#rightCard #stormShopContent>.extraCard,#rightCard #decorShopContent>.extraCard{background:#fff!important;color:var(--shop-ink)!important;border:1px solid var(--shop-border)!important;border-radius:14px!important;padding:12px!important;box-shadow:0 3px 10px #1024380b!important}
+#rightCard #stormShopContent .extraCard .extraCard{background:var(--shop-soft)!important;border:1px solid #dce6ef!important;border-radius:12px!important;padding:10px!important;margin:8px 0!important;box-shadow:none!important}
+#rightCard #stormShopContent b,#rightCard #decorShopContent b{color:var(--shop-ink)}
+#rightCard #stormShopContent p,#rightCard #decorShopContent .mini{color:var(--shop-muted)!important;font-size:11px;line-height:1.45}
+#rightCard #stormShopContent strong,#rightCard #decorShopContent b[style*="color"]{color:var(--shop-gold)!important;font-weight:900}
+#rightCard .extraAction,#rightCard .btn.green{background:linear-gradient(135deg,#5bd69a,#2aa86e)!important;color:#08331f!important;border:1px solid #2a9d68!important;border-radius:10px!important;font-weight:900;box-shadow:0 2px 0 #16734833}
+#rightCard #decorShopContent .btn.green:disabled{background:#e4edf3!important;color:#63778a!important;border-color:#d2dee8!important;box-shadow:none}
+#rightCard #stormShopContent .extraAction{padding:9px 10px;font-size:11px;white-space:nowrap}
+#rightCard .scroll>button[onclick*="collection"]{margin:0!important;min-height:44px;border:1px solid #64cfa5!important;border-radius:12px!important;background:#e8f8f0!important;color:#16724b!important;font-size:12px;font-weight:900;box-shadow:none}
+#rightCard #activeCard{background:#f7f9fc!important}
+#rightCard #activeCard #taskList .task{background:#fff;color:var(--shop-ink);border-color:var(--shop-border)}
+#extraPanel{background:#f4f7fb!important;color:var(--shop-ink)!important;border:1px solid #c9d8e5!important;border-radius:20px!important;box-shadow:0 24px 70px #020d1770!important;overflow:hidden}
+#extraPanel .extraHead{flex:0 0 auto;background:linear-gradient(100deg,#edf4fa,#fff)!important;color:var(--shop-ink)!important;border-bottom:1px solid var(--shop-border)!important;padding:14px 15px!important}
+#extraPanel .extraHead b{font-size:16px;letter-spacing:.2px}
+#extraPanel .extraHead .btn{background:#fff!important;color:var(--shop-ink)!important;border:1px solid var(--shop-border)!important;border-radius:10px}
+#extraPanel .extraContent{background:#f4f7fb!important;padding:12px!important;gap:10px!important}
+#extraPanel .extraCard{background:#fff!important;color:var(--shop-ink)!important;border:1px solid var(--shop-border)!important;border-radius:14px!important;box-shadow:0 4px 14px #1024380c!important;padding:12px!important}
+#extraPanel .extraCard b,#extraPanel .extraCard strong{color:var(--shop-ink)}
+#extraPanel .extraCard p{color:var(--shop-muted)!important}
+#extraPanel .extraAction{background:linear-gradient(135deg,#5bd69a,#2aa86e)!important;color:#08331f!important;border:1px solid #2a9d68!important;border-radius:10px!important}
+#extraPanel .extraAction:disabled{background:#e6edf3!important;color:#8291a0!important;border-color:#d7e0e8!important}
+#extraPanel .modelCard{background:linear-gradient(145deg,#fff,#edf5fa)!important;border-color:#d4e1eb!important;color:var(--shop-ink)!important}
+#extraPanel .modelCard b{color:var(--shop-ink)!important}
+#extraPanel .modelCard small{color:var(--shop-muted)!important}
+#extraPanel .modelArt{background:radial-gradient(ellipse at 50% 100%,#d6e9f4,#f7fbff 72%);text-shadow:none}
+#extraPanel .questHero{background:linear-gradient(130deg,#16394e,#204c61)!important;border:1px solid #3f758d!important;border-radius:15px!important;padding:14px!important}
+#extraPanel .missionCard{background:#fff!important;border:1px solid var(--shop-border)!important;border-radius:14px!important;color:var(--shop-ink)!important}
+#extraPanel .missionCard h4{color:var(--shop-ink)!important}
+#extraPanel .missionCard p{color:var(--shop-muted)!important}
+#extraPanel .missionIcon{background:#e8f3fa!important;border-color:#d4e4ef!important}
+@media(max-width:900px){
+ #rightCard.card{top:8px;bottom:calc(82px + env(safe-area-inset-bottom));max-height:none;width:calc(100% - 16px);left:8px;right:8px}
+ #rightCard .scroll{padding:9px;gap:9px}
+ #rightCard .tool{min-height:67px;padding:9px}
+ #rightCard #stormShopContent .extraCard>div[style*="display:flex"]{flex-wrap:wrap!important;align-items:center}
+ #rightCard #stormShopContent .extraCard>div[style*="display:flex"]>button{flex:1 1 90px}
+ #extraPanel{width:min(94vw,560px)!important;max-height:76vh!important;top:46%!important}
+ #extraPanel .extraContent{padding:10px!important}
+}
+
+
+/* v6.4 SHOP + CUSTOMER UX PATCH */
+#extraPanel .extraContent{overflow-y:auto;overscroll-behavior:contain;padding:12px;gap:12px}
+#stormShopContent,#decorShopContent{display:block;width:100%;min-width:0}
+#stormShopContent>.extraCard{display:flex;flex-direction:column;gap:10px;padding:12px!important;background:#f8fbfe!important;border:1px solid #d8e4ee!important;border-radius:16px!important}
+#stormShopContent .extraCard .extraCard{display:grid!important;grid-template-columns:42px minmax(0,1fr);align-items:center;gap:8px!important;margin:0!important;padding:12px!important;background:#fff!important;border:1px solid #dce6ef!important;border-radius:14px!important}
+#stormShopContent .extraCard .extraCard>div:first-child{grid-row:1 / span 3;align-self:start;width:42px!important;font-size:28px!important}
+#stormShopContent .extraCard .extraCard>div:nth-child(2){min-width:0!important}
+#stormShopContent .extraCard .extraCard>button{min-height:40px;padding:9px 12px!important;width:100%;font-size:12px;letter-spacing:.2px;border-radius:10px!important}
+#stormShopContent .extraCard .extraCard>button:nth-last-child(2):not(:last-child){grid-column:2}
+#stormShopContent .extraCard .extraCard>button:last-child{grid-column:2}
+#decorShopContent>div{display:flex;flex-direction:column;gap:8px;margin-top:0!important;padding:12px!important;background:#f8fbfe;border:1px solid #d8e4ee;border-radius:16px}
+#decorShopContent>div>div{display:grid!important;grid-template-columns:34px minmax(0,1fr) minmax(76px,auto);align-items:center;gap:10px;padding:10px 0!important;border-bottom:1px solid #e2eaf1!important}
+#decorShopContent .btn{min-width:76px;min-height:38px;border-radius:10px!important;padding:8px 10px!important;font-weight:900}
+#extraPanel button,#rightCard button{box-sizing:border-box;white-space:normal;line-height:1.2}
+/* Round, compact individual customer chat bubbles */
+.customerBubble,.customer-chat-bubble{border-radius:50%!important}
+@media(max-width:600px){
+ #extraPanel{width:calc(100vw - 24px)!important;max-height:72vh!important;top:47%!important;border-radius:18px!important}
+ #extraPanel .extraHead{padding:11px 13px!important}
+ #extraPanel .extraContent{padding:9px!important;gap:9px!important}
+ #stormShopContent .extraCard .extraCard{grid-template-columns:34px minmax(0,1fr);padding:10px!important}
+ #stormShopContent .extraCard .extraCard>div:first-child{width:34px!important;font-size:24px!important}
+ #stormShopContent .extraCard .extraCard>button{grid-column:2!important;min-height:38px}
+ #decorShopContent>div>div{grid-template-columns:28px minmax(0,1fr) 76px!important;gap:7px!important}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas><div id="toast"></div><button id="stormTestBtn" onclick="window.startStormTest()" style="position:fixed;right:10px;top:150px;z-index:45;border:2px solid #ffb454;border-radius:13px;background:linear-gradient(135deg,#9b2525,#41191e);color:#fff;padding:10px 12px;font-weight:950;font-size:12px;box-shadow:0 5px 18px #0007">🌪️ GỌI BÃO</button><div id="inkwaveNotice">INKWAVE PAINT LAB · SƠN ƯỚT ĐANG HOẠT ĐỘNG</div>
+<div id="tut"><div class="tutbox">
+<h2>🌪️ GARA SĂN BÃO · PROGRESSION GARAGE v5.4</h2><p><b>STORM CHASERS</b> — nhận xe săn bão, sửa chữa và nâng cấp gara.</p>
+<ol><li>Nhấn <b>Khách</b> rồi chọn <b>Nhận việc</b>.</li><li>Mở <b>Xưởng</b>, nhấn giữ nút sửa từng hạng mục.</li><li>Thợ sẽ đi đến xe để kiểm tra; nhấn giữ từng hạng mục để thợ thao tác sửa.</li><li>Khi hoàn thành, bấm <b>Giao xe</b> để nhận tiền.</li><li>Kéo để xoay cảnh, chụm hai ngón để zoom.</li></ol>
+<button class="btn green" style="width:100%;margin-top:8px" onclick="closeTut()">VÀO GARA 🔊</button>
+</div></div>
+<div id="ui">
+ <div class="top">
+  <div class="brand brandStorm"><canvas id="logoCanvas" width="420" height="112" aria-label="Logo Gara Sửa Xe Săn Bão"></canvas><div><b>GARA <span>SỬA XE</span></b><small>SĂN BÃO · STORM CHASERS <em class="editionTag">V6.5 GARAGE BUSINESS</em></small></div></div>
+  <div class="stats"><span class="pill">💰 <b id="cash">$5,000</b></span><span class="pill">⭐ <b id="rep">0</b></span><span class="pill">LV <b id="lvl">1</b></span><span class="pill">🚘 <b id="done">0</b></span><select id="quality" class="quality" aria-label="Chất lượng đồ họa" onchange="setQuality(this.value)"><option value="low">Low ⚡</option><option value="medium" selected>Med</option><option value="high">High ✨</option></select></div>
+  <div class="topbuttons"><button class="btn" id="sndBtn" onclick="toggleSound()" aria-label="Bật tắt âm thanh">🔊</button><button class="btn" onclick="saveGame()" aria-label="Lưu game">💾</button></div>
+ </div>
+ <div class="stormStatus"><span class="liveDot"></span><b>STORM WATCH</b><span>GARA ĐANG HOẠT ĐỘNG</span><span class="inkwaveBadge"><i></i> INKWAVE PAINT LAB</span><strong>● LIVE</strong></div>
+ <!-- Đã bỏ thẻ Ông chủ gara theo yêu cầu -->
+ <div class="layout">
+  <section class="card" id="leftCard"><h3>🚘 KHÁCH ĐANG ĐỢI <span id="qInfo">0 đợi</span><button class="btn" style="padding:4px 8px" onclick="togglePanel('left')">✕</button></h3><div class="scroll" id="jobList"></div><div style="display:flex;gap:7px;margin:9px"><button class="btn green" style="flex:1" onclick="spawnJob()">＋ Thêm khách</button><button class="btn" style="flex:1" onclick="takeLoan()">💳 Vay $800</button></div><div id="log" class="mini" style="padding:0 10px 10px;max-height:70px;overflow:auto"></div></section>
+  <div></div>
+  <section class="card" id="rightCard"><h3>🧰 XƯỞNG CỦA BẠN <span><span id="bayCount">1</span>/4 bay</span><button class="btn" style="padding:4px 8px" onclick="togglePanel('right')">✕</button></h3><div class="scroll">
+   <div class="job"><b>Tiến độ danh tiếng</b><div class="progress"><i id="expProg" style="width:0%"></i></div><small class="mini">Hoàn thành công việc để lên cấp.</small><button class="btn green" onclick="buyBay()">＋ Mở thêm bay · $4,000</button></div>
+   <div class="grid2">
+    <button class="tool" onclick="buyUp('lift')">🔩 <b>Cầu nâng Pro</b><br><small id="u-lift">Lv1/3 · $1,500</small></button>
+    <button class="tool" onclick="buyUp('tools')">🧰 <b>Đồ nghề</b><br><small id="u-tools">Lv1/3 · $1,200</small></button>
+    <button class="tool" onclick="buyUp('paint')">🎨 <b>Buồng sơn</b><br><small id="u-paint">Chưa có · $2,000</small></button>
+    <button class="tool" onclick="buyUp('diag')">💻 <b>Máy chẩn đoán</b><br><small id="u-diag">Chưa có · $1,800</small></button>
+   </div>
+   <button class="btn" style="width:100%;margin:8px 0;border-color:#49edb1;color:#a7ffda" onclick="openTab('collection')">🚘 XEM BỘ SƯU TẬP XE & LEVEL MỞ KHÓA</button>
+   <div class="job" id="businessProgression" style="margin-top:12px"><b>🏦 TÀI CHÍNH & MỞ RỘNG KINH DOANH</b><p class="mini">Gửi tiền tiết kiệm, mua nhà khi đủ vốn hoặc mở dịch vụ mua bán xe cũ. Tiến trình được lưu cùng trò chơi.</p><div class="extraCard" style="background:#fff;color:#1e2f44;border-radius:14px;margin:8px 0;padding:12px"><b>🏦 Quỹ tiết kiệm</b><p style="color:#64748b">Số dư: <strong id="savingsBalance">$0</strong> · Gửi $1.000 mỗi lần, nhận lãi thưởng 5% sau mỗi 5 xe giao.</p><button class="extraAction" onclick="depositSavings()">GỬI $1.000</button><button class="extraAction" onclick="withdrawSavings()">RÚT TIỀN</button></div><div class="extraCard" style="background:#fff;color:#1e2f44;border-radius:14px;margin:8px 0;padding:12px"><b>🏡 Mua nhà của chủ gara</b><p id="houseStatus" style="color:#64748b">Giá nhà: $25.000. Mua khi đã tích lũy đủ vốn.</p><button id="buyHouseBtn" class="extraAction" onclick="buyHouse()">MUA NHÀ · $25.000</button></div><div class="extraCard" style="background:#fff;color:#1e2f44;border-radius:14px;margin:8px 0;padding:12px"><b>🚘 Đại lý xe cũ</b><p style="color:#64748b">Mở dịch vụ với $18.000 và Level 8. Sau đó dùng vốn mua xe tồn kho, bán lại để kiếm lời.</p><button id="dealershipBtn" class="extraAction" onclick="openDealership()">MỞ DỊCH VỤ · $18.000</button><div id="dealershipControls"></div></div></div>
+   <div class="job" style="margin-top:10px"><b>🧰 CỬA HÀNG PHỤ TÙNG & TRANG TRÍ</b><p class="mini">Mua ngay tại phân xưởng. Phụ kiện xe sẽ hiện trên xe săn bão; đồ tiêu hao sẽ mất khi dùng sửa xe.</p><div id="stormShopContent"></div><div id="decorShopContent"></div></div>
+   <div class="job" id="activeCard" style="display:none"><h4>🚧 ĐANG SỬA: <span id="activeName">-</span></h4><div id="taskList"></div><div class="progress"><i id="jobProg"></i></div><button class="btn green" id="deliverBtn" onclick="deliver()" style="display:none">GIAO XE · NHẬN TIỀN 💵</button></div>
+  </div></section>
+ </div>
+ <div id="bottomJob" aria-live="polite"></div>
+ <div class="hudnote">👷 Thợ sẽ đi kiểm tra xe · Giữ nút để sửa · Kéo xoay / Zoom</div>
+ <nav class="bottom navDock" aria-label="Menu game">
+  <button class="navTab active" data-tab="home" onclick="openTab('home')"><span>🏠</span><b>Trang chủ</b></button>
+  <button class="navTab" data-tab="jobs" onclick="openTab('jobs')"><span>🔧</span><b>Công việc</b><i id="navJobBadge">2</i></button>
+  <button class="navTab" data-tab="build" onclick="openTab('build')"><span>🧰</span><b>Xây dựng</b></button>
+  <button class="navTab" data-tab="crew" onclick="openTab('crew')"><span>👷</span><b>Nhân sự</b></button>
+  <button class="navTab" data-tab="quests" onclick="openTab('quests')"><span>📋</span><b>Nhiệm vụ</b></button>
+  <button class="navTab" data-tab="collection" onclick="openTab('collection')"><span>🚙</span><b>Bộ sưu tập</b></button>
+</nav>
+<div id="extraPanel" class="extraPanel" style="display:none" role="dialog" aria-modal="true">
+ <div class="extraHead"><b id="extraTitle">Nhiệm vụ</b><button class="btn" onclick="closeExtraPanel()">✕</button></div>
+ <div id="extraContent" class="extraContent"></div>
+</div>
+<div id="drawerShade" onclick="closeAllPanels()" aria-hidden="true"></div>
+</div>
+<script>
+(function(){
+  function showGameError(message){
+    if(document.getElementById('startupError')) return;
+    var panel=document.createElement('div');
+    panel.id='startupError';
+    panel.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:22px;background:#09131f;color:#fff;font:16px/1.55 system-ui,sans-serif;text-align:left';
+    panel.innerHTML='<div style="max-width:520px;background:#172638;border:1px solid #496078;border-radius:18px;padding:22px;box-shadow:0 16px 50px #0008"><h2 style="margin:0 0 10px;color:#ffb44d">Game chưa khởi động được</h2><p id="startupErrorText" style="font-size:14px"></p><p style="font-size:13px;color:#c8d5e2">Hãy mở file bằng Chrome hoặc trình duyệt hiện đại, bật Internet và tải lại trang. Nếu mở trong trình xem tệp, hãy chọn Chia sẻ/Mở bằng Chrome.</p><button onclick="location.reload()" style="padding:11px 16px;border:0;border-radius:10px;background:#ff9b2f;color:#1b2530;font-weight:800">Tải lại game</button></div>';
+    document.body.appendChild(panel);
+    var t=document.getElementById('startupErrorText');
+    if(t)t.textContent=message||'Không tải được thư viện 3D hoặc WebGL trên thiết bị này.';
+  }
+  window.addEventListener('error',function(e){
+    var target=e.target;
+    if(target && (target.tagName==='SCRIPT' || target.tagName==='LINK')){
+      showGameError('Không tải được thành phần cần thiết của game. Kiểm tra kết nối Internet hoặc thử mở bằng Chrome.');
+    } else if(e.message){
+      showGameError('Lỗi khởi động: '+e.message);
+    }
+  },true);
+  window.addEventListener('unhandledrejection',function(e){
+    showGameError('Không tải được mô-đun 3D: '+String(e.reason && (e.reason.message||e.reason) || 'lỗi mạng'));
+  });
+  window.addEventListener('load',function(){
+    setTimeout(function(){
+      if(!window.__garageGameStarted && !document.getElementById('startupError')){
+        showGameError('Game không hoàn tất khởi động. Thử mở bằng Chrome và tải lại khi có Internet.');
+      }
+    },7000);
+  });
+})();
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+let QUALITY='medium';try{QUALITY=['low','medium','high'].includes(localStorage.getItem('gtg_quality'))?localStorage.getItem('gtg_quality'):'medium';}catch(e){}
+
+const canvas=document.getElementById('c');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bcde8);scene.fog=new THREE.Fog(0x9bcde8,45,100);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,QUALITY==='high'?1.7:QUALITY==='medium'?1.25:1));renderer.shadowMap.enabled=QUALITY!=='low';renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,250);camera.position.set(17,13,19);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,1,0);controls.minDistance=5;controls.maxDistance=50;controls.maxPolarAngle=Math.PI/2-.05;
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);}addEventListener('resize',resize);resize();
+scene.add(new THREE.HemisphereLight(0xffffff,0x536273,1.5));
+const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(12,24,10);sun.castShadow=QUALITY==='high';sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-30;sun.shadow.camera.right=30;sun.shadow.camera.top=25;sun.shadow.camera.bottom=-25;scene.add(sun);
+const mat=(color,roughness=.8,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(130,130),mat(0x91b77a));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const road=new THREE.Mesh(new THREE.PlaneGeometry(130,12),mat(0x3b4248));road.rotation.x=-Math.PI/2;road.position.set(0,.025,16);scene.add(road);
+for(let x=-60;x<65;x+=7){let stripe=new THREE.Mesh(new THREE.PlaneGeometry(3,.16),mat(0xf5f0d9));stripe.rotation.x=-Math.PI/2;stripe.position.set(x,.04,16);scene.add(stripe);}
+const garage=new THREE.Group();scene.add(garage);
+let toastTimer=0;
+function toast(msg,err=false){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';el.style.borderColor=err?'#ff5b54':'#ffffff30';clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',2600);}
+function log(msg){console.log('[Garage to Grid]',msg);}
+let audioCtx=null,masterGain=null,ambienceOsc=null,ambienceGain=null,soundOn=JSON.parse(localStorage.getItem('gtg_sound')??'true');
+function ensureAudio(){if(!audioCtx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;audioCtx=new AC();masterGain=audioCtx.createGain();masterGain.gain.value=soundOn?.65:0;masterGain.connect(audioCtx.destination);ambienceGain=audioCtx.createGain();ambienceGain.gain.value=0.025;soundOscSetup();}if(audioCtx.state==='suspended')audioCtx.resume();}
+function soundOscSetup(){try{const osc=audioCtx.createOscillator(),filter=audioCtx.createBiquadFilter();osc.type='triangle';osc.frequency.value=58;filter.type='lowpass';filter.frequency.value=150;osc.connect(filter);filter.connect(ambienceGain);ambienceGain.connect(masterGain);osc.start();ambienceOsc=osc;}catch(e){}}
+function tone(freq=440,dur=.12,wave='sine',vol=.16){if(!soundOn)return;ensureAudio();if(!audioCtx)return;try{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=wave;o.frequency.setValueAtTime(freq,audioCtx.currentTime);g.gain.setValueAtTime(.0001,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),audioCtx.currentTime+.015);g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+dur);o.connect(g);g.connect(masterGain);o.start();o.stop(audioCtx.currentTime+dur+.03);}catch(e){}}
+function sfx(kind){
+ if(!soundOn)return;
+ if(kind==='arrive'){tone(280,.18,'triangle',.15);setTimeout(()=>tone(420,.2,'triangle',.12),130);}
+ else if(kind==='tool'){tone(720,.09,'square',.07);setTimeout(()=>tone(560,.07,'square',.05),100);}
+ else if(kind==='drill'){tone(185,.09,'square',.075);}
+ else if(kind==='tire'){tone(180,.16,'sawtooth',.09);setTimeout(()=>tone(260,.12,'square',.07),130);}
+ else if(kind==='paint'){tone(105,.28,'sawtooth',.04);setTimeout(()=>tone(940,.22,'sine',.045),40);}
+ else if(kind==='success'){tone(620,.13,'sine',.13);setTimeout(()=>tone(850,.18,'sine',.14),140);}
+ else if(kind==='voice_ok'){tone(700,.09,'sine',.12);setTimeout(()=>tone(900,.12,'sine',.11),80);}
+ else if(kind==='levelup'){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.16,'sine',.13),i*110));}
+ else if(kind==='cash'){tone(740,.1,'triangle',.13);setTimeout(()=>tone(1040,.18,'triangle',.14),100);}
+ else if(kind==='buy'){tone(480,.1,'triangle',.12);setTimeout(()=>tone(720,.13,'triangle',.12),110);}
+ else if(kind==='error')tone(150,.25,'sawtooth',.1);
+}
+function refreshSoundButtons(){const label=soundOn?'🔊':'🔇';const top=document.getElementById('sndBtn');if(top)top.textContent=label;const bottom=document.getElementById('sndBottom');if(bottom)bottom.textContent=label+' Âm thanh';const dock=document.getElementById('dockSound');if(dock)dock.textContent=label+' Âm thanh';}
+window.toggleSound=()=>{soundOn=!soundOn;try{localStorage.setItem('gtg_sound',JSON.stringify(soundOn));}catch(e){}refreshSoundButtons();if(soundOn){ensureAudio();tone(700,.1,'sine',.1);toast('Đã bật âm thanh');}else{if(masterGain)masterGain.gain.value=0;toast('Đã tắt âm thanh');}if(soundOn&&masterGain)masterGain.gain.value=.65;};
+addEventListener('pointerdown',()=>{ensureAudio();},{once:true});
+document.addEventListener('visibilitychange',()=>{if(!audioCtx)return;if(document.hidden)audioCtx.suspend();else if(soundOn)audioCtx.resume();});
+refreshSoundButtons();
+
+// Vẽ logo canvas nhẹ, không cần tải ảnh hoặc font ngoài.
+(function drawStormLogo(){
+ const c=document.getElementById('logoCanvas'); if(!c)return;
+ const x=c.getContext('2d'); if(!x)return;
+ const g=x.createLinearGradient(0,0,420,112);g.addColorStop(0,'#18283b');g.addColorStop(.55,'#263f55');g.addColorStop(1,'#101a28');
+ x.fillStyle=g;x.fillRect(0,0,420,112);
+ x.strokeStyle='#36c9f4';x.lineWidth=5;x.strokeRect(3,3,414,106);
+ x.fillStyle='#e5edf5';x.font='1000 43px system-ui';x.fillText('GARA',16,48);
+ x.fillStyle='#ff9d32';x.fillText('SỬA XE',16,94);
+ x.fillStyle='#50d9ff';x.font='1000 40px system-ui';x.fillText('SĂN BÃO',206,73);
+ x.fillStyle='#ffffff';x.font='800 16px system-ui';x.fillText('⚡ STORM CHASERS ⚡',207,32);
+})();
+
+// Loop âm thanh động cơ và dụng cụ; chỉ phát sau tương tác người dùng.
+let engineOsc=null,engineGain=null,engineFilter=null,drillOsc=null,drillGain=null;
+function startEngineLoop(){
+ if(!soundOn)return;ensureAudio();if(!audioCtx||engineOsc)return;
+ try{
+  engineOsc=audioCtx.createOscillator();engineGain=audioCtx.createGain();engineFilter=audioCtx.createBiquadFilter();
+  engineOsc.type='sawtooth';engineOsc.frequency.value=62;
+  engineFilter.type='lowpass';engineFilter.frequency.value=185;
+  engineGain.gain.value=.0001;
+  engineOsc.connect(engineFilter).connect(engineGain).connect(masterGain);
+  engineGain.gain.setTargetAtTime(.035,audioCtx.currentTime,.25);engineOsc.start();
+ }catch(e){engineOsc=null;}
+}
+function stopEngineLoop(){
+ if(!engineOsc)return;
+ try{engineGain.gain.setTargetAtTime(.0001,audioCtx.currentTime,.08);const old=engineOsc;setTimeout(()=>{try{old.stop()}catch(e){}},250);}catch(e){}
+ engineOsc=null;engineGain=null;engineFilter=null;
+}
+function startDrillLoop(){
+ if(!soundOn)return;ensureAudio();if(!audioCtx||drillOsc)return;
+ try{
+  drillOsc=audioCtx.createOscillator();drillGain=audioCtx.createGain();
+  const f=audioCtx.createBiquadFilter();f.type='bandpass';f.frequency.value=430;f.Q.value=.7;
+  drillOsc.type='square';drillOsc.frequency.value=172;drillGain.gain.value=.0001;
+  drillOsc.connect(f).connect(drillGain).connect(masterGain);
+  drillGain.gain.setTargetAtTime(.045,audioCtx.currentTime,.04);drillOsc.start();
+ }catch(e){drillOsc=null;}
+}
+function stopDrillLoop(){
+ if(!drillOsc)return;
+ try{drillGain.gain.setTargetAtTime(.0001,audioCtx.currentTime,.025);const old=drillOsc;setTimeout(()=>{try{old.stop()}catch(e){}},100);}catch(e){}
+ drillOsc=null;drillGain=null;
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopDrillLoop();}else if(active&&soundOn)startEngineLoop();});
+
+// Không tải model Crayon qua mạng: cảnh quan và gara được dựng trực tiếp bằng Three.js.
+function addTree(x,z,pink=false){
+ const g=new THREE.Group();
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.11,.16,1.1,7),mat(0x76502f));trunk.position.y=.55;trunk.castShadow=true;g.add(trunk);
+ const crownMat=mat(pink?0xe9a2c8:0x438b50,.9);
+ for(const [dx,dy,dz,sc] of [[0,1.45,0,.72],[-.38,1.28,.1,.48],[.34,1.3,-.08,.5]]){const crown=new THREE.Mesh(new THREE.DodecahedronGeometry(sc,0),crownMat);crown.position.set(dx,dy,dz);crown.castShadow=true;g.add(crown);}
+ g.position.set(x,0,z);scene.add(g);return g;
+}
+function addStreetLamp(x,z){
+ const g=new THREE.Group(),black=mat(0x17212b,.55,.35),glow=new THREE.MeshStandardMaterial({color:0xffe7a1,emissive:0xffc84d,emissiveIntensity:1.2});
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.055,.09,3.3,8),black);pole.position.y=1.65;pole.castShadow=true;g.add(pole);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(.48,.07,.07),black);arm.position.set(.18,3.12,0);g.add(arm);
+ const head=new THREE.Mesh(new THREE.BoxGeometry(.34,.18,.3),glow);head.position.set(.38,3.02,0);g.add(head);
+ const light=new THREE.PointLight(0xffd984,.45,5);light.position.set(.38,2.85,0);g.add(light);g.position.set(x,0,z);scene.add(g);return g;
+}
+function addLocalScenery(){
+ // Đồ trang trí procedural; luôn có cảnh đường phố kể cả khi không có GLB ngoài.
+ [[-10,5,true],[-13,9,false],[10,7,false],[13,10,true],[-17,14,true],[18,13,false]].forEach(v=>addTree(...v));
+ [-10,-3,5,13].forEach(x=>addStreetLamp(x,10));
+ const shopColors=[0x8ecae6,0xffb703,0x219ebc,0xfb8500];
+ for(let i=0;i<4;i++){const shop=new THREE.Group(),w=mat(shopColors[i]),trim=mat(0xf5f5f4),dark=mat(0x213547);const base=new THREE.Mesh(new THREE.BoxGeometry(3.4,2.25,2.5),w);base.position.y=1.125;shop.add(base);const roof=new THREE.Mesh(new THREE.BoxGeometry(3.65,.18,2.72),trim);roof.position.y=2.32;shop.add(roof);const windowMesh=new THREE.Mesh(new THREE.BoxGeometry(1.2,.78,.05),dark);windowMesh.position.set(-.65,1.25,1.27);shop.add(windowMesh);const door=new THREE.Mesh(new THREE.BoxGeometry(.55,1.25,.06),trim);door.position.set(.85,.63,1.28);shop.add(door);shop.position.set(-19+i*12,0,-12-(i%2)*2);scene.add(shop);} 
+ const planterMat=mat(0x9a7045),leafMat=mat(0x2f7846);
+ for(const x of [-8,8]){const pot=new THREE.Mesh(new THREE.BoxGeometry(1.4,.42,.7),planterMat);pot.position.set(x,.21,4.7);scene.add(pot);for(let i=0;i<4;i++){const leaf=new THREE.Mesh(new THREE.ConeGeometry(.16,.65,5),leafMat);leaf.position.set(x-.45+i*.3,.66,4.7);leaf.rotation.z=(i-1.5)*.15;scene.add(leaf);}}
+}
+
+function createLift(){
+ const g=new THREE.Group(),dark=mat(0x303b45,.6,.25),red=mat(0xe44d42,.45,.15),metal=mat(0x697987,.35,.5);
+ const base=new THREE.Mesh(new THREE.BoxGeometry(3.5,.16,5.4),dark);base.position.y=.08;base.receiveShadow=true;g.add(base);
+ [[-1.35,1.85],[1.35,1.85],[-1.35,-1.85],[1.35,-1.85]].forEach(([x,z])=>{const post=new THREE.Mesh(new THREE.BoxGeometry(.16,2.5,.16),red);post.position.set(x,1.32,z);post.castShadow=true;g.add(post);});
+ const plat=new THREE.Mesh(new THREE.BoxGeometry(2.7,.12,4.8),metal);plat.position.y=.28;plat.name='plat';plat.receiveShadow=true;g.add(plat);
+ const armMat=mat(0xe7b747,.4,.25);for(const z of [-1.5,1.5])for(const x of [-1,1]){const a=new THREE.Mesh(new THREE.BoxGeometry(.9,.1,.14),armMat);a.position.set(x,.36,z);g.add(a);}
+ return g;
+}
+function buildGarage(bays){
+ garage.clear();
+ const W=bays*6+2,D=10,center=(bays-1)*3;
+ const floor=new THREE.Mesh(new THREE.BoxGeometry(W,.18,D),mat(0xbfc7c9,.9));
+ floor.position.set(center,.09,0);floor.receiveShadow=true;garage.add(floor);
+ // Tường sau + tường trái: mặt trước vẫn mở để nhìn rõ xe.
+ const wall=mat(0xe7edf0,.88),trim=mat(0x354c5b,.55,.15),red=mat(0xe45d4f,.55);
+ const back=new THREE.Mesh(new THREE.BoxGeometry(W,3.35,.24),wall);
+ back.position.set(center,1.675,-4.9);back.castShadow=true;back.receiveShadow=true;garage.add(back);
+ const side=new THREE.Mesh(new THREE.BoxGeometry(.24,3.35,D),wall);
+ side.position.set(-W/2,1.675,0);side.castShadow=true;garage.add(side);
+ for(let i=0;i<Math.max(8,bays*5);i++){
+  const slat=new THREE.Mesh(new THREE.BoxGeometry(.075,2.1,.035),mat(i%2?0xc89b58:0xb78543));
+  slat.position.set(-W/2+.24,1.45,-4.2+i*(8.1/Math.max(8,bays*5-1)));garage.add(slat);
+ }
+ const beam=new THREE.Mesh(new THREE.BoxGeometry(W+.25,.28,.32),red);
+ beam.position.set(center,3.38,-4.68);beam.castShadow=true;garage.add(beam);
+ // Biển GARAGE dùng canvas, không cần tải ảnh ngoài.
+ const signCanvas=document.createElement('canvas');signCanvas.width=512;signCanvas.height=128;
+ const ctx=signCanvas.getContext('2d');ctx.fillStyle='#f8fafc';ctx.fillRect(0,0,512,128);
+ ctx.fillStyle='#19364b';ctx.font='900 66px system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('GARAGE',256,62);
+ ctx.fillStyle='#e45d4f';ctx.fillRect(0,112,512,16);
+ const signTex=new THREE.CanvasTexture(signCanvas);signTex.colorSpace=THREE.SRGBColorSpace;
+ const sign=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(W-1,8),1.35),new THREE.MeshBasicMaterial({map:signTex}));
+ sign.position.set(center,2.65,-4.535);garage.add(sign);
+ // Kệ dụng cụ + bàn làm việc.
+ const benchX=center+Math.min(2.1,W*.22);
+ const workbench=new THREE.Mesh(new THREE.BoxGeometry(2.4,.22,.78),mat(0x9a622c));
+ workbench.position.set(benchX,.9,-3.95);garage.add(workbench);
+ for(const x of [benchX-1.05,benchX+1.05]){
+  const leg=new THREE.Mesh(new THREE.BoxGeometry(.12,.8,.12),trim);leg.position.set(x,.45,-3.95);garage.add(leg);
+ }
+ const pegboard=new THREE.Mesh(new THREE.BoxGeometry(2.45,1.05,.09),mat(0x278ca4));
+ pegboard.position.set(benchX,1.75,-4.7);garage.add(pegboard);
+ for(let i=0;i<6;i++){
+  const tool=new THREE.Mesh(new THREE.BoxGeometry(.08,.38,.07),mat(i%2?0xe6e9e9:0xf0b84b));
+  tool.position.set(benchX-.9+i*.36,1.75,-4.63);garage.add(tool);
+ }
+ const cabinet=new THREE.Mesh(new THREE.BoxGeometry(.7,1.25,.62),mat(0x2588a2,.55,.15));
+ cabinet.position.set(center-1.9,.625,-3.95);garage.add(cabinet);
+ for(let y=.35;y<1.1;y+=.28){
+  const drawer=new THREE.Mesh(new THREE.BoxGeometry(.53,.045,.04),mat(0xd9e5e9));drawer.position.set(center-1.9,y,-3.62);garage.add(drawer);
+ }
+ // Tăng quy mô vật dụng thực tế theo level: tủ dụng cụ, kệ phụ tùng và bàn tiếp khách.
+ const shopLevel=Math.floor(Math.max(0,state.rep||0)/400)+1;
+ if(shopLevel>=3){
+  const rackX=center+Math.max(1.1,W*.28);
+  const rack=new THREE.Mesh(new THREE.BoxGeometry(1.45,1.85,.52),mat(0x27495e,.5,.35));rack.position.set(rackX,.925,-3.95);garage.add(rack);
+  for(let y=.38;y<1.7;y+=.42){const shelf=new THREE.Mesh(new THREE.BoxGeometry(1.32,.055,.58),mat(0x9eb4bf,.4,.45));shelf.position.set(rackX,y,-3.95);garage.add(shelf);}
+  for(let row=0;row<3;row++)for(let col=0;col<3;col++){const box=new THREE.Mesh(new THREE.BoxGeometry(.28,.25,.3),mat([0xe0a13b,0x2a9d8f,0xd9534f][(row+col)%3],.45,.3));box.position.set(rackX-.43+col*.42,.53+row*.42,-3.91);garage.add(box);}
+ }
+ if(shopLevel>=5){
+  const lockerX=center-Math.max(2.8,W*.32);
+  const locker=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.9,.55),mat(0x3b6479,.4,.35));locker.position.set(lockerX,.95,-3.92);garage.add(locker);
+  for(let y=.45;y<1.7;y+=.38){const drawer=new THREE.Mesh(new THREE.BoxGeometry(.83,.055,.59),mat(0xe4edf2,.35,.45));drawer.position.set(lockerX,y,-3.61);garage.add(drawer);}
+  for(let i=0;i<4;i++){const handle=new THREE.Mesh(new THREE.BoxGeometry(.22,.035,.04),mat(0xffc34d,.35,.45));handle.position.set(lockerX,.53+i*.38,-3.57);garage.add(handle);}
+ }
+ // Máy bán nước, ghế gỗ, bồn cây và hoa hồng. Higher levels add more waiting seats.
+
+ const vending=new THREE.Mesh(new THREE.BoxGeometry(.72,1.42,.58),mat(0xc92f36,.45,.1));
+ vending.position.set(-W/2+1.1,.71,2.6);garage.add(vending);
+ const vendingGlass=new THREE.Mesh(new THREE.BoxGeometry(.48,.56,.035),mat(0x67c4dc,.25,.1));
+ vendingGlass.position.set(-W/2+1.1,.88,2.29);garage.add(vendingGlass);
+ const seat=new THREE.Mesh(new THREE.BoxGeometry(1.65,.14,.48),mat(0x9b6a35));
+ seat.position.set(-W/2+2.65,.48,2.55);garage.add(seat);
+ for(const x of [-.65,.65]){
+  const leg=new THREE.Mesh(new THREE.BoxGeometry(.09,.42,.42),mat(0x684525));leg.position.set(-W/2+2.65+x,.23,2.55);garage.add(leg);
+ }
+ const extraSeats=Math.min(5,Math.max(0,Math.floor((shopLevel-1)/3)));
+ for(let b=0;b<extraSeats;b++){
+  const sx=-W/2+2.2+(b%3)*1.75, sz=2.55+Math.floor(b/3)*1.15;
+  const plank=new THREE.Mesh(new THREE.BoxGeometry(1.45,.13,.42),mat(0x9b6a35));plank.position.set(sx,.48,sz);garage.add(plank);
+  for(const dx of [-.55,.55]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.09,.42,.38),mat(0x684525));leg.position.set(sx+dx,.23,sz);garage.add(leg);}
+  const back=new THREE.Mesh(new THREE.BoxGeometry(1.45,.38,.1),mat(0x8a592e));back.position.set(sx,.78,sz-.17);garage.add(back);
+ }
+
+ const planter=new THREE.Mesh(new THREE.BoxGeometry(1.8,.36,.5),mat(0xd85b4f));
+ planter.position.set(center+2.7,.18,3.7);garage.add(planter);
+ for(let i=0;i<3;i++){
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,.45,6),mat(0x70502d));
+  stem.position.set(center+2.1+i*.6,.55,3.7);garage.add(stem);
+  const flower=new THREE.Mesh(new THREE.DodecahedronGeometry(.28,0),mat(i===1?0xf0a7ce:0xefa0bd));
+  flower.position.set(center+2.1+i*.6,.86,3.7);garage.add(flower);
+ }
+ for(let i=0;i<bays;i++){
+  const lift=createLift();lift.position.set(i*6,0,0);garage.add(lift);
+  const lamp=new THREE.Mesh(new THREE.BoxGeometry(1.1,.12,.25),mat(0xffefb0,.35));
+  lamp.position.set(i*6,3.08,-2.2);garage.add(lamp);
+  const light=new THREE.PointLight(0xffe8b2,7,8);light.position.set(i*6,3.0,-1.8);garage.add(light);
+ }
+ upgradeGarageVisuals();
+}
+
+// v5.6: visible workshop equipment follows purchased upgrades, built procedurally.
+function upgradeGarageVisuals(){
+ if(!garage)return;
+ for(const o of [...garage.children]) if(o.userData&&o.userData.isUpgrade){garage.remove(o);if(o.geometry)o.geometry.dispose();if(o.material&&!Array.isArray(o.material))o.material.dispose();}
+ const center=(state.bays-1)*3, benchX=center+Math.min(2.1,(state.bays*6+2)*.22);
+ const add=(mesh,x,y,z)=>{mesh.position.set(x,y,z);mesh.userData.isUpgrade=true;garage.add(mesh);return mesh;};
+ if((state.up?.lift||0)>=2){
+  const comp=add(new THREE.Mesh(new THREE.CylinderGeometry(.3,.34,.95,16),mat(0xffb020,.32,.55)),center+2.45,.65,-1.3);
+  const band=add(new THREE.Mesh(new THREE.CylinderGeometry(.345,.345,.1,16),mat(0x243849,.5,.3)),center+2.45,.55,-1.3);
+  const gauge=add(new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.06,16),mat(0xf8fafc,.3,.2)),center+2.45,1.18,-1.3);gauge.rotation.x=Math.PI/2;
+  const needle=add(new THREE.Mesh(new THREE.BoxGeometry(.018,.09,.025),mat(0xe44d42)),center+2.45,1.18,-1.25);
+ }
+ if(state.up?.paint){
+  const x=center-1.8;
+  const booth=add(new THREE.Mesh(new THREE.BoxGeometry(2.35,2.15,.12),new THREE.MeshStandardMaterial({color:0xdffcff,transparent:true,opacity:.22,metalness:.1,roughness:.15})),x,1.12,-2.3);
+  const neonMat=mat(0x39d48a,.2,.1);neonMat.emissive= new THREE.Color(0x39d48a);neonMat.emissiveIntensity=1.4;
+  add(new THREE.Mesh(new THREE.BoxGeometry(2.25,.07,.14),neonMat),x,2.15,-2.18);
+  add(new THREE.PointLight(0x39d48a,4,5),x,1.9,-1.8);
+ }
+ if(state.up?.diag){
+  const tab=add(new THREE.Mesh(new THREE.BoxGeometry(.56,.055,.42),mat(0x1a2f44,.35,.4)),benchX,1.06,-3.72);
+  add(new THREE.Mesh(new THREE.BoxGeometry(.46,.012,.31),new THREE.MeshBasicMaterial({color:0x42e7e1})),benchX,1.095,-3.72);
+  for(let i=0;i<3;i++)add(new THREE.Mesh(new THREE.BoxGeometry(.06,.015,.04),mat([0x4ee6a5,0xffc857,0x55baff][i])),benchX-.13+i*.13,1.105,-3.72);
+ }
+}
+
+function makeCar(color,type){
+ const g=new THREE.Group(),bodyMat=mat(color,.36,.22),glass= new THREE.MeshStandardMaterial({color:0x17364a,metalness:.2,roughness:.18}),rubber=mat(0x111418,.95),rim=mat(0xd7e0e7,.3,.7);
+ g.userData.paintColor=color;const body=new THREE.Mesh(new THREE.BoxGeometry(2.05,.62,4.2),bodyMat);body.position.y=.72;body.castShadow=true;g.add(body);
+ const hood=new THREE.Mesh(new THREE.BoxGeometry(1.92,.2,1.12),bodyMat);hood.position.set(0,1.05,1.35);g.add(hood);
+ const cab=new THREE.Mesh(new THREE.BoxGeometry(1.55,.75,1.85),glass);cab.position.set(0,1.32,-.05);cab.castShadow=true;g.add(cab);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(1.52,.12,1.35),bodyMat);roof.position.set(0,1.72,-.08);g.add(roof);
+ for(const x of [-1,1])for(const z of [-1.35,1.35]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.39,.39,.22,16),rubber);wheel.rotation.z=Math.PI/2;wheel.position.set(x,.42,z);wheel.castShadow=true;g.add(wheel);const hub=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.235,12),rim);hub.rotation.z=Math.PI/2;hub.position.set(x*1.01,.42,z);g.add(hub);}
+ const headmat=new THREE.MeshStandardMaterial({color:0xfff3bd,emissive:0xffd36a,emissiveIntensity:.8});for(const x of [-.67,.67]){const h=new THREE.Mesh(new THREE.BoxGeometry(.36,.13,.06),headmat);h.position.set(x,.77,2.13);g.add(h);}
+ if(type==='truck'){const cargo=new THREE.Mesh(new THREE.BoxGeometry(1.85,.95,1.7),mat(0xe5edf2,.6));cargo.position.set(0,1.45,-1.2);cargo.castShadow=true;g.add(cargo);}
+ // Distinct procedural unlock models: rally kit, armored interceptor, monster truck, electric scout.
+ if(type==='rally'||type==='interceptor'||type==='electric'){
+  const accent=mat(type==='rally'?0xffb52e:type==='electric'?0x2df5d0:0xff4c5e,.35,.28);
+  const spoiler=new THREE.Mesh(new THREE.BoxGeometry(1.65,.12,.22),accent);spoiler.position.set(0,1.52,-1.86);g.add(spoiler);
+  for(const x of [-.62,-.2,.2,.62]){const led=new THREE.Mesh(new THREE.BoxGeometry(.18,.09,.055),new THREE.MeshStandardMaterial({color:0xeafcff,emissive:type==='electric'?0x2df5d0:0xffa62e,emissiveIntensity:1.2}));led.position.set(x,1.02,2.13);g.add(led);}
+  if(type==='rally'){for(const x of [-.72,.72]){const stripe=new THREE.Mesh(new THREE.BoxGeometry(.12,.018,2.7),accent);stripe.position.set(x,.93,.1);g.add(stripe);}}
+  if(type==='interceptor'){for(const x of [-.55,.55]){const beacon=new THREE.Mesh(new THREE.BoxGeometry(.28,.12,.18),accent);beacon.position.set(x,1.84,-.08);g.add(beacon);}}
+  if(type==='electric'){const battery=new THREE.Mesh(new THREE.BoxGeometry(1.1,.08,1.2),accent);battery.position.set(0,.42,-.2);g.add(battery);}
+ }
+ if(type==='truck'){
+  const bed=mat(0x273b49,.55,.3),rail=mat(0xf0b34e,.4,.35);
+  const bedFloor=new THREE.Mesh(new THREE.BoxGeometry(1.78,.12,1.55),bed);bedFloor.position.set(0,1.15,-1.22);g.add(bedFloor);
+  for(const x of [-.83,.83]){const side=new THREE.Mesh(new THREE.BoxGeometry(.12,.42,1.7),bodyMat);side.position.set(x,1.35,-1.22);g.add(side);}
+  const front=new THREE.Mesh(new THREE.BoxGeometry(1.8,.4,.12),bodyMat);front.position.set(0,1.34,-.38);g.add(front);
+  for(const x of [-.65,.65]){const hook=new THREE.Mesh(new THREE.BoxGeometry(.12,.16,.18),rail);hook.position.set(x,.53,2.1);g.add(hook);}
+ }
+ if(type==='rally'){
+  const splitter=new THREE.Mesh(new THREE.BoxGeometry(2.25,.13,.35),mat(0x171b20,.45,.3));splitter.position.set(0,.48,2.22);g.add(splitter);
+  for(const x of [-.88,.88]){const flare=new THREE.Mesh(new THREE.BoxGeometry(.22,.2,1.45),bodyMat);flare.position.set(x,.66,.65);g.add(flare);}
+  const roofLight=new THREE.Mesh(new THREE.BoxGeometry(1.25,.13,.22),mat(0xffe7a0,.3,.2));roofLight.position.set(0,1.82,.65);g.add(roofLight);
+ }
+ if(type==='interceptor'){
+  const bumper=new THREE.Mesh(new THREE.BoxGeometry(2.28,.25,.28),mat(0x20262c,.5,.3));bumper.position.set(0,.54,2.18);g.add(bumper);
+  const bar=new THREE.Mesh(new THREE.BoxGeometry(1.15,.12,.2),mat(0x111820,.4,.3));bar.position.set(0,1.88,-.05);g.add(bar);
+  for(const x of [-.45,.45]){const beacon=new THREE.Mesh(new THREE.BoxGeometry(.32,.16,.2),new THREE.MeshStandardMaterial({color:x<0?0x2288ff:0xff2238,emissive:x<0?0x1166ff:0xff1122,emissiveIntensity:1.5}));beacon.position.set(x,1.98,-.05);g.add(beacon);}
+ }
+ if(type==='electric'){
+  const pod=mat(0x2df5d0,.25,.2);for(const x of [-.8,.8]){const skirt=new THREE.Mesh(new THREE.BoxGeometry(.14,.18,2.6),pod);skirt.position.set(x,.55,0);g.add(skirt);}
+  const sensor=new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,.16,12),pod);sensor.position.set(0,1.91,-.2);g.add(sensor);
+ }
+ if(type==='monster'){
+  // lifted chassis + oversized wheels are visibly different from the starter sedan
+  for(const child of [...g.children])if(child.geometry?.type==='CylinderGeometry'&&child.position.y<.5){child.scale.set(1.32,1.32,1.32);child.position.y=.5;}
+  const liftBar=new THREE.Mesh(new THREE.BoxGeometry(1.55,.22,2.1),mat(0x303b45,.55,.25));liftBar.position.set(0,1.25,-.15);g.add(liftBar);
+  const bumper=new THREE.Mesh(new THREE.BoxGeometry(2.2,.25,.22),mat(0xffa928,.35,.25));bumper.position.set(0,.55,2.1);g.add(bumper);
+ }
+ return g;
+}
+let state;try{state=JSON.parse(localStorage.getItem('gtg_gara1')||'null');}catch(e){state=null;}
+if(!state||typeof state.cash!=='number')state={cash:5000,rep:0,done:0,bays:1,debt:0,up:{lift:1,tools:1,paint:0,diag:0}};
+state.crew=Math.max(1,Math.min(4,Number(state.crew)||1));state.wages=Math.max(15,Number(state.wages)||15);state.fatigue=Array.isArray(state.fatigue)?state.fatigue:[0,0,0,0];while(state.fatigue.length<4)state.fatigue.push(0);state.questClaimed=Array.isArray(state.questClaimed)?state.questClaimed:[];state.weather=state.weather||'sunny';state.unlockedStorm=!!state.unlockedStorm||Math.floor(Math.max(0,state.rep||0)/400)+1>=2;state.risk=Math.max(0,Number(state.risk)||0);state.up.stormBay=Math.max(0,Number(state.up.stormBay)||0);
+state.debt=Math.max(0,Number(state.debt)||0);
+state.up=Object.assign({lift:1,tools:1,paint:0,diag:0},state.up||{});state.bays=Math.max(1,Math.min(4,state.bays||1));
+state.savings=Math.max(0,Number(state.savings)||0);state.houseOwned=!!state.houseOwned;state.dealershipOwned=!!state.dealershipOwned;state.dealershipSales=Math.max(0,Number(state.dealershipSales)||0);
+state.shopOwned=Array.isArray(state.shopOwned)?state.shopOwned:[];state.shopEquipped=Array.isArray(state.shopEquipped)?state.shopEquipped:[];state.shopStock=state.shopStock&&typeof state.shopStock==='object'?state.shopStock:{};state.decorOwned=Array.isArray(state.decorOwned)?state.decorOwned:[];state.restAlerts=Number(state.restAlerts)||0;state.autoCrew=state.autoCrew!==false;
+
+// Bốn xe săn bão low-poly riêng biệt; đây là hình học dựng trong game, không giả làm GLB.
+const STORM_SHOP=[
+ {id:'roof_rack',name:'Giá nóc chở thiết bị',icon:'🧰',price:650,desc:'Khung thép đen trên nóc xe',kind:'rack'},
+ {id:'radar_dome',name:'Radar Doppler mini',icon:'📡',price:1200,desc:'Chảo radar xoay trên nóc',kind:'radar'},
+ {id:'lightbar',name:'Đèn cảnh báo LED',icon:'🚨',price:480,desc:'Thanh đèn đỏ-xanh trên nóc',kind:'lights'},
+ {id:'front_bumper',name:'Cản trước gia cố',icon:'🛡️',price:900,desc:'Cản kim loại lớn phía trước',kind:'bumper'},
+ {id:'snorkel',name:'Ống hút gió lội nước',icon:'🌊',price:350,desc:'Ống hút gió dọc trụ xe',kind:'snorkel'},
+ {id:'sensor_mast',name:'Cột cảm biến gió',icon:'🌪️',price:780,desc:'Cột đo gió cao phía sau',kind:'mast'},
+ {id:'side_armor',name:'Giáp hông thép',icon:'⚙️',price:1100,desc:'Tấm giáp hai bên thân xe',kind:'armor'},
+ {id:'winch',name:'Tời kéo cứu hộ',icon:'🔩',price:560,desc:'Tời cáp ở đầu xe',kind:'winch'}
+];
+function makeShopPart(kind){
+ const g=new THREE.Group(),metal=mat(0x263542,.42,.72),silver=mat(0xb8c8d2,.3,.8),red=mat(0xf02f42,.25,.35),blue=mat(0x29c8ff,.2,.3),black=mat(0x111820,.7,.2),gold=mat(0xf6b934,.35,.5);
+ const box=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;g.add(o);return o;};
+ if(kind==='rack'){for(const z of [-.48,.48])box(1.8,.07,.07,metal,0,1.55,z);for(const x of [-.78,.78])box(.07,.13,1.05,metal,x,1.55,0);box(1.25,.09,.45,black,0,1.66,0);}
+ if(kind==='radar'){const stem=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,.5,10),silver);stem.position.y=1.55;g.add(stem);const dish=new THREE.Mesh(new THREE.SphereGeometry(.34,18,10,0,Math.PI*2,0,Math.PI*.52),silver);dish.position.set(0,1.84,-.05);dish.rotation.x=Math.PI;g.add(dish);const hub=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),red);hub.position.set(0,1.84,-.05);g.add(hub);}
+ if(kind==='lights'){box(1.12,.13,.2,black,0,1.58,.43);for(const x of [-.42,-.21,0,.21,.42])box(.14,.11,.18,x<0?red:blue,x,1.61,.43);}
+ if(kind==='bumper'){box(1.9,.2,.22,metal,0,.56,.92);for(const x of [-.7,-.35,0,.35,.7])box(.08,.22,.18,silver,x,.56,1.02);}
+ if(kind==='snorkel'){const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.055,.065,.95,10),black);pipe.position.set(.93,1.2,.2);g.add(pipe);const bend=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.24,10),silver);bend.rotation.z=Math.PI/2;bend.position.set(.86,1.68,.2);g.add(bend);}
+ if(kind==='mast'){const pole=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,1.05,10),silver);pole.position.set(0,1.9,-.55);g.add(pole);for(let i=0;i<3;i++){const vane=box(.08,.22,.05,gold,(i-1)*.12,2.38,-.55);vane.rotation.z=i*.8;}}
+ if(kind==='armor'){for(const x of [-1.02,1.02]){box(.12,.38,1.3,metal,x,.8,0);box(.14,.05,1.25,gold,x,.88,0);}}
+ if(kind==='winch'){box(.62,.22,.18,black,0,.58,1.05);const spool=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.2,12),silver);spool.rotation.z=Math.PI/2;spool.position.set(0,.62,1.17);g.add(spool);const cable=box(.035,.035,.42,black,0,.5,1.36);cable.rotation.x=.25;}
+ return g;
+}
+function applyShopGear(car){if(!car||!car.userData.stormChaser)return;car.children.filter(o=>o.userData&&o.userData.shopGear).forEach(o=>car.remove(o));for(const id of state.shopEquipped){const item=STORM_SHOP.find(x=>x.id===id);if(!item)continue;const part=makeShopPart(item.kind);part.userData.shopGear=true;part.userData.shopGearId=id;car.add(part);}car.userData.shopEquipped=[...state.shopEquipped];}
+window.buyStormItem=function(id){const item=STORM_SHOP.find(x=>x.id===id);if(!item)return;if(state.cash<item.price){toast('Không đủ tiền: $'+item.price,true);return;}state.cash-=item.price;if(!state.shopOwned.includes(id))state.shopOwned.push(id);state.shopStock[id]=(Number(state.shopStock[id])||0)+1;if(!state.shopEquipped.includes(id))state.shopEquipped.push(id);scene.traverse(o=>{if(o.userData&&o.userData.stormChaser)applyShopGear(o);});if(showcaseCar?.userData?.stormChaser)applyShopGear(showcaseCar);updateHUD();saveSilent();renderStormShop();sfx('buy');toast('Đã mua và lắp '+item.name+' · -$'+item.price);};
+window.toggleStormItem=function(id){if(!state.shopOwned.includes(id))return;state.shopEquipped=state.shopEquipped.includes(id)?state.shopEquipped.filter(x=>x!==id):[...state.shopEquipped,id];scene.traverse(o=>{if(o.userData&&o.userData.stormChaser)applyShopGear(o);});if(showcaseCar?.userData?.stormChaser)applyShopGear(showcaseCar);saveSilent();renderStormShop();toast(state.shopEquipped.includes(id)?'Đã lắp phụ kiện.':'Đã tháo phụ kiện.');};
+window.renderStormShop=function(){const host=document.getElementById('stormShopContent');if(!host)return;host.innerHTML='<div class="extraCard"><b>🧰 Kho phụ tùng của xưởng</b><p>Phụ tùng đã mua sẽ nằm trong kho. Khi nhận xe săn bão bị hư, dùng phụ tùng để xử lý hỏng hóc và giảm chi phí vật tư.</p>'+STORM_SHOP.map(it=>{const owned=state.shopOwned.includes(it.id),on=state.shopEquipped.includes(it.id),stock=Number(state.shopStock[it.id])||0;return `<div class="extraCard"><div style="font-size:28px;width:42px;text-align:center">${it.icon}</div><div style="min-width:0"><b>${it.name}</b><p style="margin:4px 0">${it.desc}</p><strong style="color:#bd8b25">$${it.price.toLocaleString()}</strong><p>Trong kho: <b>${stock}</b> · ${on?'Đã lắp trên xe săn bão':owned?'Đã mua':'Chưa mua'}</p></div><button class="extraAction" onclick="buyStormItem('${it.id}')">${owned?'MUA THÊM':'MUA'}</button>${owned?`<button class="extraAction" onclick="toggleStormItem('${it.id}')">${on?'THÁO PHỤ KIỆN':'LẮP PHỤ KIỆN'}</button>`:''}</div>`}).join('')+'</div>';};
+const DECOR_SHOP=[
+ {id:'bench',name:'Băng ghế công viên',icon:'🪑',price:220,desc:'Ghế gỗ đặt cạnh gara'},
+ {id:'flower',name:'Bồn hoa rực rỡ',icon:'🌷',price:180,desc:'Bồn hoa trang trí trước xưởng'},
+ {id:'tree',name:'Cây bóng mát',icon:'🌳',price:300,desc:'Cây xanh tăng vẻ sinh động'},
+ {id:'lamp',name:'Đèn sân xưởng',icon:'💡',price:260,desc:'Đèn chiếu sáng khu vực chờ'}
+];
+state.decorOwned=Array.isArray(state.decorOwned)?state.decorOwned:[];
+function placeDecor(){
+ if(window.__garageDecorGroup){scene.remove(window.__garageDecorGroup);window.__garageDecorGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
+ const root=new THREE.Group();window.__garageDecorGroup=root;
+ const wood=mat(0x8a5734,.8),leaf=mat(0x35a965,.8),pink=mat(0xf08eb7,.65),soil=mat(0x79553b,.95),metal=mat(0x34495b,.5,.55);
+ const mesh=(geo,ma,x,y,z)=>{const o=new THREE.Mesh(geo,ma);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;root.add(o);return o;};
+ state.decorOwned.forEach((id,i)=>{const x=-8+(i%4)*4,z=5+Math.floor(i/4)*2;
+ if(id==='bench'){mesh(new THREE.BoxGeometry(1.8,.12,.42),wood,x,.55,z);for(const dx of [-.65,.65])mesh(new THREE.BoxGeometry(.12,.5,.12),metal,x+dx,.28,z);mesh(new THREE.BoxGeometry(1.8,.45,.12),wood,x,.83,z-.16);}
+ if(id==='flower'){mesh(new THREE.BoxGeometry(1.05,.28,.55),soil,x,.14,z);for(let k=0;k<5;k++){mesh(new THREE.CylinderGeometry(.025,.03,.32,5),leaf,x-.4+k*.2,.42,z);mesh(new THREE.SphereGeometry(.12,7,6),k%2?pink:mat(0xffc94b),x-.4+k*.2,.59,z);}}
+ if(id==='tree'){mesh(new THREE.CylinderGeometry(.12,.18,1.1,7),wood,x,.55,z);mesh(new THREE.SphereGeometry(.7,8,7),leaf,x,1.45,z);}
+ if(id==='lamp'){mesh(new THREE.CylinderGeometry(.045,.07,2.3,8),metal,x,1.15,z);mesh(new THREE.BoxGeometry(.55,.08,.25),mat(0xffed9b,.25,.2),x,2.25,z);}
+ });scene.add(root);
+}
+window.buyDecor=function(id){const item=DECOR_SHOP.find(x=>x.id===id);if(!item)return;if(state.decorOwned.includes(id)){toast('Bạn đã mua món trang trí này rồi.');return;}if(state.cash<item.price){toast('Không đủ tiền: $'+item.price,true);return;}state.cash-=item.price;state.decorOwned.push(id);placeDecor();updateHUD();saveSilent();renderDecorShop();sfx('buy');toast('Đã mua và đặt '+item.name+' vào khuôn viên gara.');};
+window.renderDecorShop=function(){const host=document.getElementById('decorShopContent');if(!host)return;host.innerHTML='<div style="margin-top:10px"><b>🌳 TRANG TRÍ KHUÔN VIÊN</b>'+DECOR_SHOP.map(it=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #ffffff20"><span style="font-size:24px">${it.icon}</span><div style="flex:1"><b>${it.name}</b><div class="mini">${it.desc}</div><b style="color:#ffc34d">$${it.price}</b></div><button class="btn green" onclick="buyDecor('${it.id}')" ${state.decorOwned.includes(it.id)?'disabled':''}>${state.decorOwned.includes(it.id)?'ĐÃ MUA':'MUA'}</button></div>`).join('')+'</div>';};
+function makeStormChaser(variant=0){
+ const colors=[0x111820,0x171a20,0x202832,0xe11d2d];
+ const g=new THREE.Group(),paint=mat(colors[variant%4],.34,.28),dark=mat(0x111820,.6,.25),glass=new THREE.MeshStandardMaterial({color:0x142b3c,metalness:.25,roughness:.18}),red=mat(0xe11d2d,.35,.2),silver=mat(0xc6d0d8,.32,.55);
+ g.userData.paintColor=colors[variant%4];const shape=new THREE.Shape();
+ shape.moveTo(-2.0,.18);shape.lineTo(-1.65,.78);shape.lineTo(-.9,1.08);shape.lineTo(.55,1.1);shape.lineTo(1.55,.78);shape.lineTo(2.0,.35);shape.lineTo(1.9,.12);shape.lineTo(-1.8,.12);shape.closePath();
+ const body=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:1.62,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.055,bevelThickness:.055}),paint);
+ body.rotation.y=Math.PI/2;body.position.set(-.81,.34,0);body.castShadow=true;body.receiveShadow=true;g.add(body);
+ // kính trước/sau và cửa kính tối màu
+ const wind=new THREE.Mesh(new THREE.BoxGeometry(1.2,.34,.045),glass);wind.position.set(0,1.25,.56);wind.rotation.x=-.2;g.add(wind);
+ for(const z of [-.48,.08]){
+  const sideGlass=new THREE.Mesh(new THREE.BoxGeometry(.04,.36,.46),glass);sideGlass.position.set(1.0,1.03,z);g.add(sideGlass);
+  const sideGlass2=sideGlass.clone();sideGlass2.position.x=-1.0;g.add(sideGlass2);
+ }
+ // bánh xe, vành bạc
+ for(const x of [-.96,.96])for(const z of [-.57,.57]){
+  const tire=new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,.24,14),dark);tire.rotation.z=Math.PI/2;tire.position.set(x,.39,z);tire.castShadow=true;g.add(tire);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.255,12),silver);hub.rotation.z=Math.PI/2;hub.position.set(x*1.015,.39,z);g.add(hub);
+ }
+ // chắn bùn và đèn đỏ đặc trưng
+ for(const x of [-1.08,1.08]){
+  const bar=new THREE.Mesh(new THREE.BoxGeometry(.12,.62,1.3),dark);bar.position.set(x,.65,0);g.add(bar);
+  const beacon=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,.24,8),red);beacon.position.set(x,1.1,.35);g.add(beacon);
+ }
+ const hood=new THREE.Mesh(new THREE.BoxGeometry(1.5,.13,.75),dark);hood.position.set(0,1.12,.42);g.add(hood);
+ const grille=new THREE.Mesh(new THREE.BoxGeometry(.7,.32,.06),silver);grille.position.set(0,.66,.85);g.add(grille);
+ const headMat=new THREE.MeshStandardMaterial({color:0xfff2c2,emissive:0xffd36a,emissiveIntensity:1.1});
+ for(const x of [-.48,.48]){const lamp=new THREE.Mesh(new THREE.BoxGeometry(.24,.1,.06),headMat);lamp.position.set(x,.72,.86);g.add(lamp);}
+ if(variant===0){
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,.92,8),silver);mast.position.set(0,1.88,-.35);g.add(mast);
+  for(let i=0;i<3;i++){const vane=new THREE.Mesh(new THREE.BoxGeometry(.08,.28,.06),dark);vane.position.set(i===1?.12:-.12,2.18,-.35);vane.rotation.z=i*Math.PI/3;g.add(vane);}
+ }else if(variant===1){
+  const fin=new THREE.Mesh(new THREE.ConeGeometry(.32,.55,4),dark);fin.position.set(0,1.5,-.52);fin.rotation.x=Math.PI;g.add(fin);
+  const jaw=new THREE.Mesh(new THREE.BoxGeometry(1.25,.1,.1),silver);jaw.position.set(0,.5,.9);g.add(jaw);
+ }else if(variant===2){
+  for(const x of [-.45,.45]){const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.48,8),red);pipe.position.set(x,1.47,-.5);pipe.rotation.z=-.22;g.add(pipe);}
+  const sensor=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.12,12),dark);sensor.position.set(0,1.5,-.2);g.add(sensor);
+ }else{
+  const scoop=new THREE.Mesh(new THREE.BoxGeometry(.65,.3,1.1),red);scoop.position.set(0,1.35,-.2);g.add(scoop);
+  const stripe=new THREE.Mesh(new THREE.BoxGeometry(2.2,.07,.035),mat(0xfff1c7,.4));stripe.position.set(0,.88,.83);g.add(stripe);
+ }
+ g.userData.stormChaser=true;g.userData.variant=variant;applyShopGear(g);return g;
+}
+function addStormDamage(car,variant=0){
+ if(!car)return;const damage=['flat','glass','dust','armor'][variant%4];car.userData.damages=[damage];car.userData.originalWheelScales=[];
+ if(damage==='flat'){
+  const wheels=car.children.filter(c=>c.geometry?.type==='CylinderGeometry'&&c.position.y<.7);
+  wheels.slice(0,1).forEach(w=>{car.userData.originalWheelScales.push({obj:w,scale:w.scale.clone(),y:w.position.y});w.scale.y=.48;w.position.y-=.12;w.userData.flatTire=true;});
+ }else if(damage==='glass'){
+  const cv=document.createElement('canvas');cv.width=256;cv.height=128;const cx=cv.getContext('2d');cx.clearRect(0,0,256,128);cx.strokeStyle='#f4fbff';cx.lineWidth=3;cx.beginPath();cx.moveTo(128,64);cx.lineTo(95,42);cx.lineTo(78,18);cx.moveTo(95,42);cx.lineTo(55,50);cx.moveTo(128,64);cx.lineTo(158,38);cx.lineTo(184,27);cx.moveTo(158,38);cx.lineTo(176,70);cx.moveTo(128,64);cx.lineTo(116,93);cx.lineTo(92,110);cx.stroke();
+  const tex=new THREE.CanvasTexture(cv);const crack=new THREE.Mesh(new THREE.PlaneGeometry(1.0,.48),new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.DoubleSide}));crack.position.set(0,1.38,.77);crack.rotation.x=-.12;crack.name='stormCrack';car.add(crack);car.userData.damageOverlay=crack;
+ }else if(damage==='dust'){
+  car.traverse(o=>{if(o.isMesh&&o.material?.color&&!o.userData.dustAdjusted){o.userData.dustOriginal=o.material.color.clone();o.material.color.multiplyScalar(.78);o.userData.dustAdjusted=true;}});
+ }
+}
+function restoreStormCar(car){
+ if(!car)return;(car.userData.originalWheelScales||[]).forEach(v=>{v.obj.scale.copy(v.scale);v.obj.position.y=v.y;delete v.obj.userData.flatTire;});
+ car.traverse(o=>{if(o.userData.dustOriginal&&o.material?.color){o.material.color.copy(o.userData.dustOriginal);delete o.userData.dustOriginal;delete o.userData.dustAdjusted;}});
+ if(car.userData.damageOverlay){car.remove(car.userData.damageOverlay);car.userData.damageOverlay.geometry.dispose();car.userData.damageOverlay.material.map?.dispose();car.userData.damageOverlay.material.dispose();delete car.userData.damageOverlay;}
+ car.userData.damages=[];
+}
+const dilemmas=[
+ {t:'Khách giục giao gấp',d:'Xe săn bão cần đi đón bão tối nay. Giao nhanh nhận thêm tiền nhưng mất danh tiếng, hay sửa kỹ?',a:[{t:'Giao gấp · +$120',run:()=>{state.cash+=120;addReputation(-20);toast('Giao gấp: thêm tiền nhưng giảm 20 danh tiếng.');}},{t:'Sửa kỹ · +40 rep',run:()=>{state.cash+=60;addReputation(40);toast('Khách khen gara sửa có tâm!');}}]},
+ {t:'Thiếu đồ nghề',d:'Thợ báo thiếu dụng cụ. Mua bộ đồ nghề tốt hơn hay vá tạm để tiết kiệm?',a:[{t:'Mua đồ nghề $400',run:()=>{if(state.cash<400)return toast('Không đủ $400.',true);state.cash-=400;state.up.tools=Math.min(3,(state.up.tools||1)+1);toast('Đã nâng cấp đồ nghề.');}},{t:'Vá tạm',run:()=>{state.risk=.25;toast('Đã vá tạm · các lần sửa sau có rủi ro bị phàn nàn.');}}]},
+ {t:'Đề xuất nâng cấp gara',d:'Một đội săn bão đề xuất đầu tư $2.500 cho Bay Săn Bão để nhận hợp đồng đặc biệt.',a:[{t:'Đầu tư $2.500',run:()=>{if(state.cash<2500)return toast('Cần $2.500.',true);state.cash-=2500;state.up.stormBay=1;state.unlockedStorm=true;toast('Đã mở Bay Săn Bão!');}},{t:'Để sau',run:()=>toast('Đã ghi nhận, có thể nâng cấp sau.')}]}];
+window.dilemmas=dilemmas;
+function triggerDilemma(){
+ const d=dilemmas[Math.floor(Math.random()*dilemmas.length)];let m=document.getElementById('dilemmaModal');if(!m){m=document.createElement('div');m.id='dilemmaModal';m.style.cssText='position:fixed;inset:0;z-index:50;background:#0009;display:flex;align-items:center;justify-content:center;padding:14px';document.body.appendChild(m);}
+ m.innerHTML=`<div style="background:#f8f5eb;color:#1a2a3d;padding:18px;border-radius:18px;width:min(92vw,400px);box-shadow:0 20px 60px #0008"><h3 style="margin:0 0 8px">${d.t}</h3><p style="font-size:13px;line-height:1.5">${d.d}</p><div style="display:flex;gap:8px;flex-wrap:wrap">${d.a.map((x,i)=>`<button class="btn" style="flex:1;min-width:125px;background:#ff922b;color:#fff;border:0" onclick="chooseDilemma(${dilemmas.indexOf(d)},${i})">${x.t}</button>`).join('')}</div></div>`;m.style.display='flex';speakGuide(d.t);
+}
+window.chooseDilemma=(di,ai)=>{const d=dilemmas[di],a=d?.a?.[ai];if(!a)return;try{a.run();}finally{document.getElementById('dilemmaModal')?.remove();updateHUD();saveSilent();}};
+let proposer=null;
+function spawnProposer(){
+ if(proposer)scene.remove(proposer);proposer=makeWorker(0xff6b35,-22,18);proposer.userData.isProposer=true;proposer.userData.targetX=0;
+ let bub=document.getElementById('proposeBubble');if(!bub){bub=document.createElement('div');bub.id='proposeBubble';bub.style.cssText='position:fixed;left:50%;top:42%;transform:translateX(-50%);background:#fff;color:#1a2a3d;padding:10px 12px;border-radius:12px;font-weight:800;z-index:25;max-width:92vw;text-align:center;box-shadow:0 8px 28px #0005';document.body.appendChild(bub);}bub.innerHTML=`🌪️ Tôi có TIV-2 cần nâng cấp! <button onclick="openTab('build');document.getElementById('proposeBubble')?.remove()" style="margin-left:8px;background:#ff922b;color:#fff;border:0;padding:6px 10px;border-radius:8px">Xem</button> <button onclick="document.getElementById('proposeBubble')?.remove()" style="background:#e9ecef;border:0;padding:6px;border-radius:8px">Để sau</button>`;speakGuide('Có khách săn bão cần nâng cấp đặc biệt.');
+}
+let jobs=[],active=null,carsByBay=new Map(),holdTask=null,holdFrame=0,jobId=1;
+// GARA SĂN BÃO v5.8 Storm Parts Shop Edition — tương thích dữ liệu lưu v4/v5.
+window.GARA_STORM_VERSION='6.0-WORKSHOP-TYCOON';
+const colors=[0x2f80ed,0xe64b46,0x43b978,0xf1c644,0x8c6ed9,0xe98c39,0x3e596b,0xe9edf0];
+const carNames=['Coupe','SUV','Pickup','Sedan','Hatchback','Roadster'];
+// INKWAVE-inspired procedural paint system: no external textures/assets. Spray droplets are
+// GPU meshes with wet/glossy materials; temporary splats fade out and are disposed safely.
+const inkParticles=[]; let lastInkSprayAt=0, inkSprayCount=0;
+const inkPalette=[0x19e6d0,0x55b7ff,0xff9d45,0xf2f7ff];
+function spawnInkSpray(car,taskId,now){
+ if(!car||now-lastInkSprayAt<62)return; lastInkSprayAt=now;
+ const isPaint=taskId==='paint'; const color=isPaint?(car.userData.paintColor||0x39d9d0):0x8be9ff;
+ const origin=new THREE.Vector3((Math.random()-.5)*1.6, .78+Math.random()*.62, (Math.random()-.5)*2.6);
+ car.localToWorld(origin);
+ const count=isPaint?5:2;
+ for(let i=0;i<count;i++){
+  const radius=isPaint?.035+Math.random()*.075:.018+Math.random()*.035;
+  const material=new THREE.MeshStandardMaterial({color:isPaint?color:inkPalette[1],roughness:.16,metalness:.18,transparent:true,opacity:.95,emissive:isPaint?color:0x148db5,emissiveIntensity:.24});
+  const drop=new THREE.Mesh(new THREE.SphereGeometry(radius,7,5),material);
+  drop.position.copy(origin).add(new THREE.Vector3((Math.random()-.5)*.45,Math.random()*.38,(Math.random()-.5)*.45));
+  drop.scale.set(1,.5,1.2); drop.userData={born:now,life:260+Math.random()*330,vx:(Math.random()-.5)*.018,vy:.015+Math.random()*.025,vz:(Math.random()-.5)*.018,material};scene.add(drop);inkParticles.push(drop);
+ }
+ inkSprayCount++;
+ const notice=document.getElementById('inkwaveNotice');if(notice){notice.textContent=isPaint?'INKWAVE · PHUN SƠN ƯỚT / WET GLOSS':'GARAGE FX · ĐANG SỬA CHI TIẾT';notice.classList.add('show');clearTimeout(notice._hide);notice._hide=setTimeout(()=>notice.classList.remove('show'),650);}
+}
+function updateInkParticles(now,dt){
+ for(let i=inkParticles.length-1;i>=0;i--){const p=inkParticles[i],u=p.userData,age=now-u.born;if(age>=u.life){scene.remove(p);p.geometry.dispose();p.material.dispose();inkParticles.splice(i,1);continue;}p.position.x+=u.vx*(dt*60);p.position.y+=u.vy*(dt*60);p.position.z+=u.vz*(dt*60);u.vy-=.001*(dt*60);p.material.opacity=Math.max(0,1-age/u.life);p.scale.multiplyScalar(1.002);}
+}
+const MODEL_CATALOG=[
+ {id:'sedan',name:'Sedan khởi đầu',level:1,icon:'🚗',type:'sedan',desc:'Xe khách cơ bản · dễ sửa'},
+ {id:'pickup',name:'Pickup địa hình',level:2,icon:'🛻',type:'truck',desc:'Thùng hàng · hợp đồng lợi nhuận cao'},
+ {id:'storm0',name:'TIV-1 Storm Scout',level:2,icon:'🌪️',type:'storm',variant:0,desc:'Xe săn bão đầu tiên · cảm biến gió'},
+ {id:'rally',name:'Rally Thunder',level:3,icon:'🏎️',type:'rally',desc:'Body kit thể thao · nhiều hạng mục sơn'},
+ {id:'storm1',name:'TIV-2 Interceptor',level:4,icon:'🚨',type:'storm',variant:1,desc:'Khung gia cố · hợp đồng đặc biệt'},
+ {id:'interceptor',name:'Rescue Interceptor',level:5,icon:'🚔',type:'interceptor',desc:'Đèn khẩn cấp · tiền công cao'},
+ {id:'storm2',name:'Cyclone Lab',level:6,icon:'🌀',type:'storm',variant:2,desc:'Xe nghiên cứu bão cấp cao'},
+ {id:'monster',name:'Monster MudRunner',level:7,icon:'🚙',type:'monster',desc:'Bánh địa hình cỡ lớn · sửa chữa đắt'},
+ {id:'electric',name:'Volt E-Scout',level:8,icon:'⚡',type:'electric',desc:'Xe điện thám sát · chẩn đoán điện'},
+ {id:'storm3',name:'TIV-X Tornado Beast',level:10,icon:'🌋',type:'storm',variant:3,desc:'Xe săn bão tối thượng · hợp đồng VIP'}
+];
+function currentLevel(){return Math.floor(Math.max(0,state.rep||0)/400)+1;}
+function unlockedModels(){return MODEL_CATALOG.filter(m=>currentLevel()>=m.level);}
+function renderCollection(){
+ const level=currentLevel(),unlocked=unlockedModels(),next=MODEL_CATALOG.find(m=>m.level>level);
+ const cards=MODEL_CATALOG.map(m=>{const open=level>=m.level;return `<div class="modelCard ${open?'unlocked':'locked'}"><div class="modelArt">${open?m.icon:'🔒'}</div><b>${m.name}</b><small>${m.desc}</small><span class="modelStatus">${open?'✓ ĐÃ MỞ KHÓA':'MỞ Ở LEVEL '+m.level}</span>${open?`<button class="btn green" style="width:100%;margin-top:8px;padding:8px 4px;font-size:11px" onclick="orderSpecificModel('${m.id}')">NHẬN HỢP ĐỒNG XE NÀY</button>`:''}</div>`}).join('');
+ document.getElementById('extraContent').innerHTML=`<div class="questHero"><div class="qBig">🚘 BỘ SƯU TẬP XE</div><p>Level ${level} · Đã mở ${unlocked.length}/${MODEL_CATALOG.length} mẫu xe. Hoàn thành hợp đồng để mở thêm thiết kế xe được dựng bằng hình học 3D procedural.</p><div class="progress"><i style="width:${unlocked.length/MODEL_CATALOG.length*100}%"></i></div><b>${next?`Mục tiêu tiếp theo: ${next.name} · Level ${next.level}`:'ĐÃ MỞ TOÀN BỘ MẪU XE!'}</b></div><div class="modelGrid">${cards}</div><div class="extraCard"><b>🎯 Cách mở xe mới</b><p>Nhận việc → giữ nút sửa từng hạng mục → giao xe để lấy danh tiếng. Mỗi 400 danh tiếng lên một level. Xe mới sẽ xuất hiện trong danh sách khách hàng từ level yêu cầu.</p><button class="extraAction" onclick="closeExtraPanel();openTab('jobs')">ĐI NHẬN HỢP ĐỒNG 🔧</button></div>`;renderStormShop();
+}
+const taskPool=[{id:'engine',name:'Chẩn đoán động cơ',cost:45,reward:135,sound:'tool'},{id:'tire',name:'Kiểm tra lốp xe',cost:25,reward:95,sound:'tire'},{id:'brake',name:'Sửa hệ thống phanh',cost:38,reward:120,sound:'tool'},{id:'electric',name:'Kiểm tra điện',cost:32,reward:110,sound:'tool'},{id:'paint',name:'Sơn và đánh bóng',cost:50,reward:155,sound:'paint'},{id:'oil',name:'Thay dầu động cơ',cost:20,reward:85,sound:'tool'}];
+function saveSilent(){try{localStorage.setItem('gtg_gara1',JSON.stringify(state));}catch(e){}}
+function saveGame(){saveSilent();toast('Đã lưu tiến trình!');}
+function resetGame(){if(confirm('Xóa tiến trình và chơi lại từ đầu?')){localStorage.removeItem('gtg_gara1');location.reload();}}
+
+window.saveGame=saveGame;window.resetGame=resetGame;
+function speakGuide(text){
+ if(!soundOn || !('speechSynthesis' in window)) return;
+ try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='vi-VN';u.rate=1;speechSynthesis.speak(u);}catch(e){}
+}
+function showRewardBanner(title,desc){
+ let b=document.getElementById('rewardBanner');
+ if(!b){b=document.createElement('div');b.id='rewardBanner';b.style.cssText='position:fixed;top:calc(74px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:45;width:max-content;max-width:92vw;background:linear-gradient(135deg,#ffd43b,#ff922b);color:#3d1e00;padding:12px 18px;border-radius:14px;font-weight:950;box-shadow:0 10px 30px #0005;text-align:center;pointer-events:none';document.body.appendChild(b);}
+ b.innerHTML=title+'<br><small style="font-weight:750">'+desc+'</small>';b.style.display='block';clearTimeout(b._hideTimer);b._hideTimer=setTimeout(()=>b.style.display='none',3800);
+}
+function addReputation(amount){
+ const before=Math.floor(Math.max(0,state.rep)/400)+1;
+ state.rep=Math.max(0,state.rep+amount);
+ const after=Math.floor(state.rep/400)+1;
+ if(after>before){
+  const bonus=300+200*after;state.cash+=bonus;
+  if(after>=2)state.unlockedStorm=true;
+  const unlocked=MODEL_CATALOG.filter(m=>m.level===after);showRewardBanner('🎉 LÊN CẤP '+after+' · THƯỞNG +$'+bonus.toLocaleString(),unlocked.length?'MỞ KHÓA: '+unlocked.map(m=>m.name).join(', '):'Danh tiếng tăng · tiếp tục nhận việc');
+  sfx('levelup');speakGuide('Chúc mừng bạn đã lên cấp '+after+', nhận thưởng '+bonus+' đô.');
+  if(unlocked.length){sfx('levelup');setTimeout(()=>{toast('🚘 Xe mới đã mở: '+unlocked.map(m=>m.name).join(', '));},500);}if(after===2) setTimeout(spawnProposer,900);
+ }
+ updateHUD();saveSilent();
+}
+
+window.closeTut=()=>{document.getElementById('tut').style.display='none';ensureAudio();sfx('arrive');};
+window.togglePanel=(which)=>{const l=document.getElementById('leftCard'),r=document.getElementById('rightCard');if(innerWidth>900){(which==='left'?l:r).scrollIntoView({block:'nearest',behavior:'smooth'});return;}const el=which==='left'?l:r;const opening=!el.classList.contains('open');l.classList.remove('open');r.classList.remove('open');if(opening)el.classList.add('open');};
+window.recenter=()=>{camera.position.set(innerWidth<900?13:17,innerWidth<900?12:13,innerWidth<900?16:19);controls.target.set((state.bays-1)*3,1,0);controls.update();};
+
+window.takeLoan=()=>{
+ if(state.cash>=250){toast('Chỉ vay khi tiền mặt dưới $250.',true);sfx('error');return;}
+ if(state.debt>0){toast('Bạn còn khoản vay $'+state.debt+' cần trả.',true);sfx('error');return;}
+ state.cash+=800;state.debt=900;updateHUD();saveSilent();ensureAudio();sfx('cash');toast('Đã vay $800. Khoản nợ $900 sẽ được trừ khi giao xe.');
+};
+
+function updateHUD(){
+ document.getElementById('cash').textContent='$'+Math.floor(state.cash).toLocaleString()+(state.debt?' · nợ $'+state.debt:'');document.getElementById('rep').textContent=state.rep;document.getElementById('lvl').textContent=Math.floor(state.rep/400)+1;document.getElementById('done').textContent=state.done;document.getElementById('bayCount').textContent=state.bays;document.getElementById('expProg').style.width=(state.rep%400)/4+'%';
+ document.getElementById('u-lift').textContent=`Lv${state.up.lift}/3 · $1,500`;document.getElementById('u-tools').textContent=`Lv${state.up.tools}/3 · $1,200`;document.getElementById('u-paint').textContent=(state.up.paint?'Đã mở':'Chưa có')+' · $2,000';document.getElementById('u-diag').textContent=(state.up.diag?'Đã mở':'Chưa có')+' · $1,800';
+}
+function spawnJob(){
+ if(jobs.length>=8){toast('Hàng chờ đã đủ 8 khách.',true);sfx('error');return;}
+ const level=currentLevel();
+ const unlocked=MODEL_CATALOG.filter(m=>level>=m.level);
+ const preferred=window.__preferredModelId?unlocked.find(m=>m.id===window.__preferredModelId):null; const model=preferred||unlocked[Math.floor(Math.random()*unlocked.length)]||MODEL_CATALOG[0]; window.__preferredModelId=null;
+ const pool=taskPool.filter(t=>(t.id!=='paint'||state.up.paint||level>=3)&&(t.id!=='electric'||level>=2));
+ const shuffled=pool.slice().sort(()=>Math.random()-.5);
+ const taskCount=state.done<3?2:Math.min(4,2+Math.floor(Math.random()*3));
+ const tasks=shuffled.slice(0,taskCount).map(t=>({...t,prog:0,done:false})); if(model.type==='storm'){const dmg=['flat','glass','dust','armor'][model.variant%4];const damageTask={flat:{id:'tire',name:'Thay lốp hư do bão',cost:55,reward:145,sound:'tire'},glass:{id:'glass',name:'Thay kính nứt',cost:70,reward:175,sound:'tool'},dust:{id:'clean',name:'Làm sạch xe sau bão',cost:35,reward:115,sound:'tool'},armor:{id:'armor',name:'Thay giáp hông thép',cost:95,reward:220,sound:'tool'}}[dmg];if(!tasks.some(t=>t.id===damageTask.id))tasks[tasks.length-1]=Object.assign({},damageTask,{prog:0,done:false});}
+ const isVIP=level>=3&&Math.random()<Math.min(.45,.12+level*.025);
+ const rawCost=tasks.reduce((sum,t)=>sum+t.cost,0)+(model.level>=5?Math.floor(model.level*3):0);
+ const cost=Math.min(220,Math.max(40,rawCost+Math.floor(Math.random()*16)));
+ const pay=Math.max(180,Math.min(900,tasks.reduce((sum,t)=>sum+t.reward,0)+(isVIP?70:35)+Math.floor(Math.random()*35)+(model.level-1)*24));
+ const stormNames={storm0:'TIV-1 Storm Scout',storm1:'TIV-2 Interceptor',storm2:'Cyclone Lab',storm3:'TIV-X Tornado Beast'};
+ const car=model.type==='storm'?(stormNames[model.id]||model.name):model.name;
+ const color=model.type==='storm'?[0x111820,0x171a20,0x202832,0xe11d2d][model.variant]:colors[Math.floor(Math.random()*colors.length)];
+ jobs.push({id:jobId++,car,type:model.type==='storm'?'storm':model.type,modelId:model.id,modelLevel:model.level,stormVariant:model.type==='storm'?model.variant:null,color,tasks,pay,cost,profit:pay-cost,isVIP});
+ renderJobs();toast('Hợp đồng mới: '+car+' · '+(model.level>1?'mẫu xe đã mở khóa':'xe cơ bản'));sfx('arrive');
+}
+window.spawnJob=spawnJob;
+
+// V6.2 MULTI-BAY AUTO WORKSHOP: each hired mechanic can own one distinct bay.
+const autoJobs = new Map(); // bay -> {job, car, stage, started, workerIndex}
+let autoRepairInFlight=false; // compatibility flag used by older UI code
+setInterval(()=>{
+ try{
+  if(!state.autoCrew || state.crew<2 || !jobs.length) return;
+  const capacity=Math.max(0,Math.min(state.crew-1, state.bays-1)); // keep one bay available for the player
+  if(capacity<=0)return;
+  const busyWorkers=new Set([...autoJobs.values()].map(a=>a.workerIndex));
+  for(let workerIndex=1;workerIndex<=Math.min(state.crew-1,workers.length-1);workerIndex++){
+   if(autoJobs.size>=capacity || busyWorkers.has(workerIndex) || !jobs.length)continue;
+   let bay=-1;
+   for(let b=0;b<state.bays;b++){
+    const showcase=carsByBay.get(b)?.userData?.showcase;
+    if(!carsByBay.has(b) && !autoJobs.has(b) && !(active&&active.bay===b)){bay=b;break;}
+    if(showcase && !active && !autoJobs.has(b)){scene.remove(carsByBay.get(b));carsByBay.delete(b);bay=b;break;}
+   }
+   if(bay<0)break;
+   const j=jobs[0]; if(!j || state.cash<j.cost)break;
+   jobs.shift();state.cash-=j.cost;j.bay=bay;
+   const car=j.stormVariant!==null&&j.stormVariant!==undefined?makeStormChaser(j.stormVariant):makeCar(j.color,j.type);
+   if(j.stormVariant!==null&&j.stormVariant!==undefined){addStormDamage(car,j.stormVariant);applyShopGear(car);}
+   car.position.set(bay*6,.03,10.5);car.rotation.y=Math.PI;
+   car.userData.arrival={from:10.5,start:performance.now(),duration:1000,bayX:bay*6};
+   scene.add(car);carsByBay.set(bay,car);
+   const entry={job:j,car,stage:'tools',started:Date.now(),workerIndex,bay};autoJobs.set(bay,entry);busyWorkers.add(workerIndex);
+   setTimeout(()=>{const a=autoJobs.get(bay);if(a===entry)a.stage='repair';},1500);
+   const duration=Math.max(9000,18000+Math.max(0,4-state.crew)*1800-Math.max(0,currentLevel()-1)*220);
+   setTimeout(()=>{
+    const a=autoJobs.get(bay);if(a!==entry)return;
+    if(carsByBay.get(bay)!==car){autoJobs.delete(bay);autoRepairInFlight=autoJobs.size>0;return;}
+    if(j.type==='storm'&&j.tasks.some(t=>t.id==='armor')&&(Number(state.shopStock.side_armor)||0)>0){state.shopStock.side_armor--;car.children.filter(o=>o.userData&&o.userData.shopGearId==='side_armor').forEach(o=>car.remove(o));}
+    const earned=Math.max(60,j.pay+state.up.tools*20);state.cash+=earned;state.done++;state.fatigue[bay%state.fatigue.length]=Math.min(100,(state.fatigue[bay%state.fatigue.length]||0)+10);addReputation(25+j.tasks.length*8);
+    scene.remove(car);carsByBay.delete(bay);autoJobs.delete(bay);autoRepairInFlight=autoJobs.size>0;
+    updateHUD();saveSilent();renderJobs();refreshWaitingCustomers();
+    toast('✅ Đội thợ hoàn tất '+j.car+' · Bay '+(bay+1)+' · +$'+earned.toLocaleString());
+    if(state.done%10===0){state.restAlerts++;showCrewRestBubble();}
+    if(jobs.length<3)spawnJob();
+   },duration);
+   toast('👷 Thợ bay '+(bay+1)+' lấy dụng cụ và bắt đầu sửa '+j.car);
+  }
+  autoRepairInFlight=autoJobs.size>0;renderJobs();updateHUD();saveSilent();
+ }catch(e){console.warn('Auto workshop v6.2',e);}
+},4500);
+
+function renderJobs(){const el=document.getElementById('jobList');el.innerHTML='';document.getElementById('qInfo').textContent=jobs.length+' đợi';const badge=document.getElementById('navJobBadge');if(badge){badge.textContent=jobs.length;badge.style.display=jobs.length?'block':'none';}if(!jobs.length){el.innerHTML='<div class="mini">Chưa có khách. Bấm + Thêm khách.</div>';return;}for(const j of jobs){const d=document.createElement('div');d.className='job';const hex='#'+j.color.toString(16).padStart(6,'0');d.innerHTML=`<h4>${j.isVIP?'⭐ VIP · ':''}${j.car} #${String(j.id).padStart(3,'0')} <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${hex}"></span> ${j.type==='storm'?'🌪️ XE SĂN BÃO':j.type==='truck'?'🛻 ĐỊA HÌNH':j.type==='rally'?'🏁 RALLY':j.type==='monster'?'🛞 MONSTER':j.type==='electric'?'⚡ XE ĐIỆN':j.type==='interceptor'?'🚨 CỨU HỘ':''}</h4><small class="mini">Mẫu mở từ LV ${j.modelLevel||1} · ${j.tasks.map(t=>t.name).join(' • ')}</small><div class="moneyrow"><span>Trả $${j.pay}</span><span>Phí $${j.cost}</span><span style="color:#68e3a2">Lãi $${j.profit}</span></div><button class="btn green" onclick="acceptJob(${j.id})">Nhận việc</button>`;el.appendChild(d);}}
+function renderActive(){
+ const card=document.getElementById('activeCard'),list=document.getElementById('taskList'),btn=document.getElementById('deliverBtn');
+ if(!active){card.style.display='none';document.body.classList.remove('repairing');renderBottomJob();return;}
+ card.style.display='flex';document.getElementById('activeName').textContent=active.car+' #'+String(active.id).padStart(3,'0')+(active.isVIP?' ⭐ VIP':'');list.innerHTML='';let completed=0;
+ for(const t of active.tasks){const d=document.createElement('div');d.className='task'+(t.done?' done':'');d.innerHTML=`<div class="taskhead"><b>${t.name}</b><span>${t.done?'✅ Xong':Math.round(t.prog)+'%'}</span></div><div class="progress"><i style="width:${t.prog}%"></i></div>${t.done?'':`<button class="btn" onpointerdown="startHold('${t.id}')" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()" style="touch-action:none">Nhấn giữ để sửa 🔧</button>`}`;list.appendChild(d);if(t.done)completed++;}
+ document.getElementById('jobProg').style.width=(active.tasks.reduce((sum,t)=>sum+t.prog,0)/active.tasks.length)+'%';btn.style.display=completed===active.tasks.length?'block':'none';
+ document.body.classList.add('repairing');renderBottomJob();
+}
+function renderBottomJob(){
+ const bar=document.getElementById('bottomJob');if(!bar)return;
+ if(!active){bar.classList.remove('visible');bar.innerHTML='';document.body.classList.remove('repairing');return;}
+ bar.classList.add('visible');document.body.classList.add('repairing');
+ const icons={engine:'🚗',tire:'🛞',brake:'🛑',electric:'🔋',paint:'🎨',oil:'🛢️'};
+ const pct=Math.round(active.tasks.reduce((sum,t)=>sum+t.prog,0)/Math.max(1,active.tasks.length));
+ const tasks=active.tasks.map(t=>{
+  const name=({'Chẩn đoán động cơ':'Động cơ','Kiểm tra lốp xe':'Lốp xe','Sửa hệ thống phanh':'Phanh','Kiểm tra điện':'Điện','Sơn và đánh bóng':'Sơn xe','Thay dầu động cơ':'Thay dầu'})[t.name]||t.name;
+  return `<div class="taskChip ${t.done?'done':''}" data-task-id="${t.id}"><div class="taskIcon">${icons[t.id]||'🔧'}</div><div class="taskName">${name}</div><div class="bar"><i style="width:${Math.max(0,Math.min(100,t.prog))}%"></i></div><small>${t.done?'✓ Hoàn tất':Math.round(t.prog)+'%'}</small>${t.done?'<button class="holdBtn" disabled>ĐÃ XONG ✓</button>':`<button class="holdBtn" onpointerdown="event.preventDefault();event.stopPropagation();startHold('${t.id}')" onpointerup="stopHold()" onpointercancel="stopHold()" ontouchend="stopHold()" ontouchcancel="stopHold()" oncontextmenu="return false">✊ Giữ để sửa</button>`}</div>`;
+ }).join('');
+ const ready=active.tasks.every(t=>t.done);
+ bar.innerHTML=`<div class="repairSummary"><div class="repairTitle">🚘 ${active.car} #${String(active.id).padStart(3,'0')}</div><div class="repairMeta">Đang sửa · Bay ${(active.bay||0)+1}<br>Tiến độ ${pct}%</div><div class="progress"><i style="width:${pct}%"></i></div><div class="repairMeta">Trả $${active.pay} · Phí $${active.cost}<br><b style="color:#68e3a2">Lãi +$${active.profit}</b></div><div class="repairMeta" style="color:#ffbd73;font-weight:900">Chọn hạng mục → GIỮ để sửa</div><div id="sweetHint">🟡 Canh nhịp vàng để sửa nhanh hơn</div></div><div class="repairTasks">${tasks}</div><button class="deliverChip" onclick="deliver()" ${ready?'':'disabled'}>${ready?'🚗 GIAO XE':'🔒 Còn sửa'}<br>${ready?'+$'+active.pay:'Hoàn tất hết'}</button>`;
+}
+
+function updateRepairLiveUI(){
+ if(!active)return;
+ const pct=Math.round(active.tasks.reduce((sum,t)=>sum+t.prog,0)/Math.max(1,active.tasks.length));
+ const summary=document.querySelector('#bottomJob .repairSummary .progress i');
+ if(summary)summary.style.width=pct+'%';
+ const meta=document.querySelector('#bottomJob .repairSummary .repairMeta');
+ if(meta)meta.innerHTML='Đang sửa · Bay '+((active.bay||0)+1)+'<br>Tiến độ '+pct+'%';
+ for(const t of active.tasks){
+  const chip=document.querySelector(`#bottomJob [data-task-id="${t.id}"]`);
+  if(!chip)continue;
+  const phase=(performance.now()/1000)%2.4;const sweet=phase>1.15&&phase<1.72;
+  chip.classList.toggle('active',holdTask===t.id&&!t.done);chip.classList.toggle('sweet',holdTask===t.id&&!t.done&&sweet);
+  const bar=chip.querySelector('.bar i');if(bar)bar.style.width=Math.max(0,Math.min(100,t.prog))+'%';
+  const small=chip.querySelector('small');if(small)small.textContent=t.done?'✓ Hoàn tất':Math.round(t.prog)+'%';
+ }
+}
+function updateObjective(){
+ const banner=document.getElementById('objectiveBanner');
+ if(!banner)return;
+ if(active){banner.style.display='none';return;}
+ banner.style.display='flex';
+ const title=document.getElementById('objectiveTitle'),desc=document.getElementById('objectiveText');
+ if(state.done===0){title.textContent='Sửa chiếc xe đầu tiên';desc.textContent='Chọn Công việc để bắt đầu kiếm tiền';}
+ else if(currentLevel()<4){title.textContent='Mở khóa xe mới · Level '+currentLevel();desc.textContent=`Danh tiếng ${state.rep}/400 · giao thêm xe để mở mẫu mới`;}
+ else {title.textContent='Ông chủ gara';desc.textContent='Bấm vào đây để mở nâng cấp, mua phụ tùng và trang trí gara';}
+}
+function getFreeBay(){
+ /* Xe trưng bày ở bay 0 có thể được thay thế khi nhận khách đầu tiên. */
+ if(!active && carsByBay.has(0) && carsByBay.get(0)?.userData?.showcase) return 0;
+ for(let i=0;i<state.bays;i++)if(!carsByBay.has(i))return i;
+ return -1;
+}
+window.acceptJob=(id)=>{if(active){toast('Hãy giao xe hiện tại trước.',true);sfx('error');return;}const idx=jobs.findIndex(j=>j.id===id);if(idx<0)return;const j=jobs[idx];if(j.type==='storm'&&!state.up.paint&&!state.up.stormBay&&currentLevel()<2){toast('Đạt Level 2 để nhận hợp đồng xe săn bão.',true);sfx('error');return;}const bay=getFreeBay();if(bay<0){toast('Tất cả bay đang có xe. Giao xe hoặc mở thêm bay.',true);sfx('error');return;}if(state.cash<j.cost){toast('Không đủ tiền mua phụ tùng: $'+j.cost,true);sfx('error');return;}ensureAudio();state.cash-=j.cost;active=j;jobs.splice(idx,1);active.bay=bay;const previous=carsByBay.get(bay);if(previous){scene.remove(previous);carsByBay.delete(bay);}const car=j.stormVariant!==null&&j.stormVariant!==undefined?makeStormChaser(j.stormVariant):makeCar(j.color,j.type);if(j.stormVariant!==null&&j.stormVariant!==undefined){addStormDamage(car,j.stormVariant);applyShopGear(car);}car.position.set(bay*6,.03,10.5);car.rotation.y=Math.PI;car.userData.arrival={from:10.5,start:performance.now(),duration:1250,bayX:bay*6};scene.add(car);carsByBay.set(bay,car);startEngineLoop();renderJobs();renderActive();updateHUD();saveSilent();controls.target.set(bay*6,1,0);camera.position.set(bay*6+9,7.5,11);controls.update();sfx('arrive');toast('Xe đã vào bay '+(bay+1));closeAllPanels();setActiveTab('home');renderBottomJob();updateObjective();};
+window.startHold=(id)=>{if(holdTask||!active)return;const task=active.tasks.find(x=>x.id===id);if(!task||task.done)return;ensureAudio();startEngineLoop();startDrillLoop();holdTask=id;let last=performance.now();function tick(now){if(holdTask!==id||!active){holdFrame=0;return;}const dt=Math.min(.06,(now-last)/1000);last=now;const t=active.tasks.find(x=>x.id===id);if(!t||t.done){stopHold();return;}const repairCar=carsByBay.get(active.bay);if(repairCar)spawnInkSpray(repairCar,id,now);const fatigue=Math.min(100,state.fatigue[(active.bay||0)%state.fatigue.length]||0);const tiredPenalty=fatigue>80?.5:1;const phase=(now/1000)%2.4;const inSweet=phase>1.15&&phase<1.72;const sweetBonus=inSweet?1.65:1;t.prog=Math.min(100,t.prog+dt*(23+state.up.lift*10+(state.up.diag?7:0)+Math.max(0,(state.crew||1)-1)*3)*tiredPenalty*sweetBonus);if(inSweet&&Math.random()<.018&&navigator.vibrate)navigator.vibrate(12);if(Math.random()<.16)sfx(t.sound);if(t.prog>=100){t.prog=100;t.done=true;holdTask=null;stopDrillLoop();sfx('success');if(t.id==='armor'&&active.type==='storm'){const armor=STORM_SHOP.find(x=>x.id==='side_armor');if((Number(state.shopStock.side_armor)||0)>0){state.shopStock.side_armor--;const c=carsByBay.get(active.bay);if(c){c.children.filter(o=>o.userData&&o.userData.shopGear&&o.userData.shopGearId==='side_armor').forEach(o=>c.remove(o));}toast('Đã dùng 1 bộ giáp hông từ kho để thay giáp hư.');}else{toast('Đã sửa tạm phần giáp — kho hết giáp hông, cần mua thêm để thay thật.');}}else toast(t.id==='paint'?'INKWAVE: Lớp sơn bóng đã hoàn tất!':'Hoàn thành: '+t.name);if(t.id==='paint'){for(let k=0;k<3;k++)setTimeout(()=>{const c=carsByBay.get(active?.bay);if(c)spawnInkSpray(c,'paint',performance.now()+k*100);},k*100);sfx('paint');}renderActive();updateObjective();}else{updateRepairLiveUI();}if(holdTask===id)holdFrame=requestAnimationFrame(tick);else holdFrame=0;}holdFrame=requestAnimationFrame(tick);};
+window.stopHold=()=>{holdTask=null;if(holdFrame){cancelAnimationFrame(holdFrame);holdFrame=0;}stopDrillLoop();};
+window.deliver=()=>{if(!active||!active.tasks.every(t=>t.done)){toast('Chưa hoàn thành tất cả hạng mục.',true);sfx('error');return;}const j=active;const car=carsByBay.get(j.bay);let partsUsed=[];if(j.type==='storm'&&j.tasks.some(t=>t.id==='armor')){partsUsed.push('đã hoàn tất hạng mục giáp');}if(car?.userData?.stormChaser){restoreStormCar(car);sfx('paint');}const gross=j.pay+state.up.tools*35;const repayment=Math.min(state.debt||0,gross);const earned=gross-repayment;state.debt=Math.max(0,(state.debt||0)-repayment);state.cash+=earned;const repGain=35+j.tasks.length*12+(j.isVIP?25:0);state.done++;state.fatigue[j.bay%state.fatigue.length]=Math.min(100,(state.fatigue[j.bay%state.fatigue.length]||0)+18);refreshWaitingCustomers();if(state.done>0&&state.done%10===0){state.restAlerts++;setTimeout(()=>showCrewRestBubble(),500);}addReputation(repGain);if(car){const start=performance.now(),from=car.position.clone();function exit(now){const p=Math.min(1,(now-start)/850);car.position.x=from.x+p*2;car.position.z=from.z+p*9;car.rotation.y=Math.PI-p*.3;if(p<1)requestAnimationFrame(exit);else{scene.remove(car);carsByBay.delete(j.bay);}}requestAnimationFrame(exit);}active=null;holdTask=null;stopDrillLoop();stopEngineLoop();renderActive();updateHUD();saveSilent();sfx('cash');toast('Giao xe thành công · +$'+earned.toLocaleString()+(partsUsed.length?' · đã dùng phụ tùng: '+partsUsed.join(', '):'')+(repayment?' (đã trả nợ $'+repayment+')':''));closeAllPanels();setActiveTab('home');renderJobs();updateObjective();if(state.done%2===0)setTimeout(triggerDilemma,1200);if(Math.random()<.7)setTimeout(spawnJob,900);};
+window.buyUp=(type)=>{const prices={lift:1500,tools:1200,paint:2000,diag:1800};const max={lift:3,tools:3,paint:1,diag:1};if(!(type in prices))return;if(state.up[type]>=max[type]){toast('Đã đạt cấp tối đa.',true);sfx('error');return;}if(state.cash<prices[type]){toast('Không đủ tiền: $'+prices[type],true);sfx('error');return;}state.cash-=prices[type];if(type==='lift'||type==='tools')state.up[type]++;else state.up[type]=1;upgradeGarageVisuals();updateHUD();saveSilent();sfx('buy');toast('Nâng cấp thành công!');};
+window.buyBay=()=>{if(state.bays>=4){toast('Đã đạt tối đa 4 bay.',true);sfx('error');return;}if(state.cash<4000){toast('Cần $4,000 để mở bay.',true);sfx('error');return;}state.cash-=4000;state.bays++;state.crew=state.crew||1;state.questClaimed=state.questClaimed||[];buildGarage(state.bays);updateHUD();saveSilent();sfx('buy');toast('Đã mở bay số '+state.bays+' · đội thợ có thêm chỗ làm việc');};
+
+// ===== TÀI CHÍNH, NHÀ RIÊNG & ĐẠI LÝ XE CŨ =====
+window.depositSavings=()=>{if(state.cash<1000){toast('Cần $1.000 tiền mặt để gửi tiết kiệm.',true);return;}state.cash-=1000;state.savings=(state.savings||0)+1000;updateHUD();saveSilent();refreshBusinessUI();sfx('buy');toast('Đã gửi $1.000 vào quỹ tiết kiệm.');};
+window.withdrawSavings=()=>{if(!(state.savings>0)){toast('Quỹ tiết kiệm đang trống.',true);return;}const amount=state.savings;state.savings=0;state.cash+=amount;updateHUD();saveSilent();refreshBusinessUI();toast('Đã rút $'+amount.toLocaleString()+' từ quỹ tiết kiệm.');};
+window.buyHouse=()=>{if(state.houseOwned){toast('Bạn đã sở hữu nhà riêng.');return;}if(state.cash<25000){toast('Cần $25.000 để mua nhà.',true);return;}state.cash-=25000;state.houseOwned=true;updateHUD();saveSilent();refreshBusinessUI();sfx('buy');toast('Chúc mừng! Bạn đã mua nhà riêng.');};
+window.openDealership=()=>{if(!state.dealershipOwned){if(currentLevel()<8){toast('Cần đạt Level 8 để mở đại lý xe cũ.',true);return;}if(state.cash<18000){toast('Cần $18.000 để mở dịch vụ bán xe.',true);return;}state.cash-=18000;state.dealershipOwned=true;updateHUD();saveSilent();sfx('buy');toast('Đã mở dịch vụ mua bán xe cũ!');}else{const price=3500+Math.min(12000,currentLevel()*350);if(state.cash<price){toast('Cần $'+price.toLocaleString()+' để nhập một xe cũ.',true);return;}state.cash-=price;const sale=Math.round(price*1.28);state.cash+=sale;state.dealershipSales=(state.dealershipSales||0)+1;updateHUD();saveSilent();toast('Đã bán xe cũ #'+state.dealershipSales+' · lãi +$'+(sale-price).toLocaleString());}refreshBusinessUI();};
+window.refreshBusinessUI=()=>{const b=document.getElementById('savingsBalance');if(b)b.textContent='$'+(state.savings||0).toLocaleString();const hs=document.getElementById('houseStatus'),hb=document.getElementById('buyHouseBtn');if(hs)hs.textContent=state.houseOwned?'Bạn đã sở hữu nhà riêng — tài sản dài hạn của bạn.':'Giá nhà: $25.000. Mua khi đã tích lũy đủ vốn.';if(hb){hb.textContent=state.houseOwned?'ĐÃ MUA NHÀ':'MUA NHÀ · $25.000';hb.disabled=!!state.houseOwned;}const db=document.getElementById('dealershipBtn');if(db)db.textContent=state.dealershipOwned?'NHẬP XE CŨ · $'+(3500+Math.min(12000,currentLevel()*350)).toLocaleString():'MỞ DỊCH VỤ · $18.000';const host=document.getElementById('dealershipControls');if(host)host.innerHTML=state.dealershipOwned?`<p style="color:#64748b">Đã bán ${state.dealershipSales||0} xe · nhấn nút trên để nhập và bán xe tiếp theo.</p>`:'';};
+
+// ===== NAVIGATION + TUTORIAL FLOW =====
+function closeAllPanels(){
+ document.getElementById('leftCard').classList.remove('open');
+ document.getElementById('rightCard').classList.remove('open');
+ closeExtraPanel();
+ document.getElementById('drawerShade').classList.remove('visible');
+ document.body.classList.remove('panelOpen');
+}
+function closeExtraPanel(){
+ const p=document.getElementById('extraPanel'); if(p)p.style.display='none';
+}
+window.closeExtraPanel=closeExtraPanel;
+window.closeAllPanels=closeAllPanels;
+function setActiveTab(tab){
+ document.querySelectorAll('.navTab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+}
+function renderExtraPanel(tab){
+ const panel=document.getElementById('extraPanel'),title=document.getElementById('extraTitle'),content=document.getElementById('extraContent');
+ panel.style.display='flex';
+ if(tab==='crew'){
+  title.textContent='👷 Đội ngũ thợ máy';
+  const hired=state.crew||1;
+  content.innerHTML=`<div class="extraCard"><b>👷 Đội thợ máy · ${hired}/4 người</b><p>Mỗi thợ thuê tăng tốc độ sửa; sau mỗi 10 xe giao, đội thợ sẽ hiện bong bóng xin nghỉ. Khi mệt trên 80%, tốc độ sửa giảm.</p><div style="font-size:12px;line-height:1.8">${state.fatigue.slice(0,hired).map((f,i)=>`<div>Thợ ${i+1}: <b>${Math.round(f)}% mệt</b><div class="progress"><i style="width:${Math.min(100,f)}%;background:${f>80?'#ff6b6b':'#39c982'}"></i></div></div>`).join('')}</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="extraAction" onclick="hireCrew()" ${hired>=4||state.cash<900?'disabled':''}>${hired>=4?'Đủ nhân sự':'Thuê thợ · $900'}</button><button class="extraAction" onclick="restCrew()">Cho nghỉ 30 giây</button></div></div>
+  <div class="extraCard"><b>💵 Lương theo công việc: $${state.wages}</b><p>Tăng lương tốn $500, giúp đội ngũ hồi phục nhanh hơn sau mỗi lượt sửa.</p><button class="extraAction" onclick="raiseWage()">Tăng lương +$5/job · $500</button></div>
+  <div class="extraCard"><b>⚡ Tốc độ sửa</b><p>Cầu nâng cấp ${state.up.lift}/3 · Máy chẩn đoán ${state.up.diag?'đã mở':'chưa mở'}.</p><button class="extraAction" onclick="closeExtraPanel();openTab('build')">Mở nâng cấp xưởng</button></div>`;
+ }else{
+  title.textContent='📋 Nhiệm vụ & phần thưởng';
+  const lvl=currentLevel();
+  const tasks=[
+   {name:'🔧 Kỹ thuật viên mới',desc:'Giao chiếc xe đầu tiên để mở sổ hợp đồng.',goal:1,progress:Math.min(state.done,1),reward:150},
+   {name:'🚗 Nhịp độ gara',desc:'Giao 3 xe; mở thêm các mẫu khách hàng và tăng dòng tiền.',goal:3,progress:Math.min(state.done,3),reward:350},
+   {name:'⭐ Lên cấp 2',desc:'Tích lũy 400 danh tiếng để mở TIV-1 Storm Scout.',goal:2,progress:Math.min(lvl,2),reward:500},
+   {name:'🎨 Xưởng sơn chuyên nghiệp',desc:'Mở buồng sơn để nhận thêm hợp đồng sơn xe VIP.',goal:1,progress:state.up.paint?1:0,reward:450},
+   {name:'🌪️ Thợ máy săn bão',desc:'Đạt level 4 để mở TIV-2 Interceptor và hợp đồng bão cao cấp.',goal:4,progress:Math.min(lvl,4),reward:800},
+   {name:'🏆 Ông trùm gara',desc:'Giao 10 xe để chứng minh năng lực quản lý.',goal:10,progress:Math.min(state.done,10),reward:1200}
+  ];
+  content.innerHTML=`<div class="questHero"><div class="qBig">📋 HỢP ĐỒNG & THÀNH TỰU</div><p>Level ${lvl} · ${state.done} xe đã giao · ${state.rep} danh tiếng. Mỗi hợp đồng hoàn tất sẽ giúp tiến gần tới các mẫu xe và hợp đồng cao cấp.</p><div class="progress"><i style="width:${(state.rep%400)/4}%"></i></div><b>${400-(state.rep%400)} danh tiếng tới level tiếp theo</b></div>`+tasks.map((q,i)=>{const done=state.questClaimed?.includes(i)||false;const ready=q.progress>=q.goal;return `<div class="missionCard"><div class="missionIcon">${q.name.split(' ')[0]}</div><div><h4>${q.name.substring(q.name.indexOf(' ')+1)}</h4><p>${q.desc}</p><div class="missionMeta"><span>${Math.min(q.progress,q.goal)}/${q.goal} tiến độ</span><span>🎁 $${q.reward}</span></div><div class="progress"><i style="width:${Math.min(100,q.progress/q.goal*100)}%"></i></div></div><button class="extraAction" ${!ready||done?'disabled':''} onclick="claimQuest(${i},${q.reward})">${done?'✓ Đã nhận thưởng':ready?'NHẬN THƯỞNG':'ĐANG THỰC HIỆN'}</button></div>`;}).join('');
+ }
+}
+window.openTab=(tab)=>{
+ closeAllPanels();setActiveTab(tab);
+ if(tab==='home'){recenter();updateObjective();toast(active?'Tiếp tục sửa xe ở thanh dưới.':'Chào mừng đến gara! Nhận việc để bắt đầu.');return;}
+ if(tab==='jobs'){document.getElementById('leftCard').classList.add('open');document.getElementById('drawerShade').classList.add('visible');document.body.classList.add('panelOpen');return;}
+ if(tab==='build'){renderStormShop();renderDecorShop();refreshBusinessUI();document.getElementById('rightCard').classList.add('open');document.getElementById('drawerShade').classList.add('visible');document.body.classList.add('panelOpen');return;}
+ if(tab==='crew'||tab==='quests'||tab==='collection'){if(tab==='collection'){document.getElementById('extraPanel').style.display='flex';document.getElementById('extraTitle').textContent='🚙 Bộ sưu tập xe';renderCollection();}else renderExtraPanel(tab);document.getElementById('drawerShade').classList.add('visible');document.body.classList.add('panelOpen');return;}
+};
+window.hireCrew=()=>{
+ state.crew=state.crew||1;
+ if(state.crew>=4){toast('Đội ngũ đã đủ 4 người.',true);return;}
+ if(state.cash<900){toast('Cần $900 để thuê thợ.',true);return;}
+ state.cash-=900;state.crew++;updateHUD();saveSilent();sfx('buy');renderExtraPanel('crew');toast('Đã thuê thêm thợ máy!');speakGuide('Đã thuê thêm thợ máy.');
+};
+
+let crewRestTimer=null;
+window.showCrewRestBubble=function(){let el=document.getElementById('crewRestBubble');if(!el){el=document.createElement('div');el.id='crewRestBubble';el.style.cssText='position:fixed;z-index:80;left:50%;top:20%;transform:translateX(-50%);width:min(90vw,390px);background:#fff8df;color:#26394b;border:2px solid #f4b942;border-radius:18px;padding:14px 16px;box-shadow:0 14px 40px #0007;font-weight:800;text-align:center';document.body.appendChild(el);}el.innerHTML='🧑‍🔧💬 Đội thợ đã sửa 10 xe! Chúng tôi mệt rồi, cho nghỉ một chút nhé.<div style="display:flex;gap:8px;margin-top:10px"><button class="btn green" style="flex:1" onclick="restCrew();document.getElementById(\'crewRestBubble\')?.remove()">Cho nghỉ</button><button class="btn" style="flex:1" onclick="document.getElementById(\'crewRestBubble\')?.remove()">Lát nữa</button></div>';speakGuide('Đội thợ đã sửa mười xe và cần nghỉ ngơi.');};
+window.restCrew=()=>{
+ state.fatigue=state.fatigue.map((f,i)=>i<state.crew?Math.max(0,f-50):f);
+ updateHUD();saveSilent();renderExtraPanel('crew');toast('Đội thợ được nghỉ ngơi 30 giây.');
+ if(crewRestTimer)clearTimeout(crewRestTimer);
+ crewRestTimer=setTimeout(()=>{state.fatigue=state.fatigue.map((f,i)=>i<state.crew?Math.max(0,f-15):f);saveSilent();},30000);
+ speakGuide('Đội thợ đang nghỉ ngơi.');
+};
+window.raiseWage=()=>{
+ if(state.cash<500){toast('Cần $500 để tăng lương.',true);return;}
+ state.cash-=500;state.wages+=5;state.fatigue=state.fatigue.map((f,i)=>i<state.crew?Math.max(0,f-10):f);
+ updateHUD();saveSilent();renderExtraPanel('crew');sfx('buy');toast('Đã tăng lương lên $'+state.wages+' mỗi công việc.');
+};
+window.claimQuest=(idx,reward)=>{
+ idx=Number(idx);reward=Number(reward);
+ if(!Number.isInteger(idx)||!Number.isFinite(reward)||reward<0){toast('Lỗi phần thưởng nhiệm vụ.',true);return;}
+ state.questClaimed=Array.isArray(state.questClaimed)?state.questClaimed:[];
+ if(state.questClaimed.includes(idx)){toast('Bạn đã nhận thưởng nhiệm vụ này.');return;}
+ const level=currentLevel();const progress=idx===0?state.done>=1:idx===1?state.done>=3:idx===2?level>=2:idx===3?!!state.up.paint:idx===4?level>=4:idx===5?state.done>=10:false;
+ if(!progress){toast('Hoàn thành nhiệm vụ trước nhé.',true);return;}
+ state.questClaimed.push(idx);state.cash+=reward;updateHUD();saveSilent();ensureAudio();sfx('cash');renderExtraPanel('quests');toast('Đã nhận thưởng +$'+reward.toLocaleString());
+};
+window.togglePanel=(which)=>{
+ if(innerWidth>900){const el=which==='left'?document.getElementById('leftCard'):document.getElementById('rightCard');el.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
+ closeExtraPanel();
+ const l=document.getElementById('leftCard'),r=document.getElementById('rightCard'),el=which==='left'?l:r;
+ const opening=!el.classList.contains('open');l.classList.remove('open');r.classList.remove('open');
+ if(opening){el.classList.add('open');document.getElementById('drawerShade').classList.add('visible');document.body.classList.add('panelOpen');}
+ else {document.getElementById('drawerShade').classList.remove('visible');document.body.classList.remove('panelOpen');}
+};
+
+// Graphics quality: adaptive shadows and particle budget for mobile devices.
+window.setQuality=(value)=>{
+ const allowed=['low','medium','high'];QUALITY=allowed.includes(value)?value:'medium';
+ try{localStorage.setItem('gtg_quality',QUALITY);}catch(e){}
+ document.body.classList.remove('quality-low','quality-medium','quality-high');document.body.classList.add('quality-'+QUALITY);
+ renderer.setPixelRatio(Math.min(devicePixelRatio,QUALITY==='high'?1.7:QUALITY==='medium'?1.25:1));
+ renderer.shadowMap.enabled=QUALITY!=='low';sun.castShadow=QUALITY==='high';sun.shadow.mapSize.set(QUALITY==='high'?1024:512,QUALITY==='high'?1024:512);sun.shadow.needsUpdate=true;
+ if(rainPoints){rainPoints.geometry.dispose();rainPoints.material.dispose();rainPoints=null;if(state.weather==='rain'||state.weather==='storm')makeRain();}
+ toast('Đồ họa: '+({low:'Low · ưu tiên mượt',medium:'Medium · cân bằng',high:'High · hình ảnh đẹp'}[QUALITY]));
+};
+try{const q=document.getElementById('quality');if(q){q.value=localStorage.getItem('gtg_quality')||'medium';document.body.classList.add('quality-'+q.value);}}catch(e){}
+
+buildGarage(state.bays);addLocalScenery();placeDecor();updateHUD();
+/* Xe trưng bày mặc định: cảnh không còn trống trước khi người chơi nhận việc. */
+let showcaseCar=makeCar(0x2f80ed,'sedan');showcaseCar.userData.showcase=true;showcaseCar.position.set(0,.03,0);showcaseCar.rotation.y=Math.PI;scene.add(showcaseCar);carsByBay.set(0,showcaseCar);
+window.previewGarageModel=function(id){const m=MODEL_CATALOG.find(x=>x.id===id);if(!m||currentLevel()<m.level){toast('Xe này chưa mở khóa.',true);return;}if(active){toast('Giao xe đang sửa xong rồi hãy đổi xe trưng bày.',true);return;}if(showcaseCar){scene.remove(showcaseCar);if(carsByBay.get(0)===showcaseCar)carsByBay.delete(0);}showcaseCar=m.type==='storm'?makeStormChaser(m.variant):makeCar(({sedan:0x2f80ed,truck:0xe5edf2,rally:0xff4b35,interceptor:0x263b54,monster:0x28323d,electric:0x22cdbd}[m.type]||0x2f80ed),m.type);showcaseCar.userData.showcase=true;showcaseCar.userData.modelId=m.id;showcaseCar.position.set(0,.03,0);showcaseCar.rotation.y=Math.PI;scene.add(showcaseCar);carsByBay.set(0,showcaseCar);controls.target.set(0,1,0);camera.position.set(9,7.5,11);controls.update();toast('Đang trưng bày xe 3D: '+m.name);};
+window.orderSpecificModel=function(id){const m=MODEL_CATALOG.find(x=>x.id===id);if(!m||currentLevel()<m.level){toast('Xe này chưa mở khóa.',true);return;}window.__preferredModelId=id;closeAllPanels();setActiveTab('jobs');spawnJob();toast('Đã đặt hợp đồng cho '+m.name);};
+/* Thợ máy có khớp tay/chân: đi tới xe, cúi kiểm tra, rồi thao tác khi người chơi giữ nút sửa. */
+function makeWorker(shirt,x,z){
+ const g=new THREE.Group(),shirtMat=mat(shirt,.72),skin=mat(0xffd2a1,.8),pants=mat(0x24384a,.8),shoe=mat(0x171b20,.8),hairMat=mat(0x392b24,.9),metal=mat(0xcbd5df,.35,.65);
+ const torso=new THREE.Group();torso.position.set(0,.77,0);g.add(torso);
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.23,.42,3,7),shirtMat);body.castShadow=true;torso.add(body);
+ const headPivot=new THREE.Group();headPivot.position.set(0,.48,.015);torso.add(headPivot);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.2,12,10),skin);head.position.y=.06;head.castShadow=true;headPivot.add(head);
+ const hair=new THREE.Mesh(new THREE.SphereGeometry(.205,12,8,0,Math.PI*2,0,Math.PI*.55),hairMat);hair.position.y=.15;headPivot.add(hair);
+ const arms=[];
+ for(const sx of [-1,1]){
+  const shoulder=new THREE.Group();shoulder.position.set(sx*.27,.25,.015);torso.add(shoulder);
+  const upper=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.25,3,6),shirtMat);upper.position.y=-.17;upper.castShadow=true;shoulder.add(upper);
+  const elbow=new THREE.Group();elbow.position.y=-.31;shoulder.add(elbow);
+  const fore=new THREE.Mesh(new THREE.CapsuleGeometry(.055,.22,3,6),skin);fore.position.y=-.14;fore.castShadow=true;elbow.add(fore);
+  arms.push({shoulder,elbow,sx});
+ }
+ const legs=[];
+ for(const sx of [-1,1]){
+  const hip=new THREE.Group();hip.position.set(sx*.11,-.08,0);g.add(hip);
+  const leg=new THREE.Mesh(new THREE.BoxGeometry(.14,.34,.16),pants);leg.position.y=-.17;leg.castShadow=true;hip.add(leg);
+  const foot=new THREE.Mesh(new THREE.BoxGeometry(.17,.09,.25),shoe);foot.position.set(0,-.34,.045);hip.add(foot);legs.push(hip);
+ }
+ // Cờ-lê nhỏ cầm ở tay phải.
+ const wrench=new THREE.Group();const handle=new THREE.Mesh(new THREE.CylinderGeometry(.025,.035,.34,7),metal);handle.position.y=-.17;wrench.add(handle);
+ const jaw=new THREE.Mesh(new THREE.TorusGeometry(.075,.022,5,10,Math.PI*1.55),metal);jaw.position.y=.02;jaw.rotation.z=Math.PI/2;wrench.add(jaw);arms[1].elbow.add(wrench);wrench.position.set(0,-.31,.035);
+ g.position.set(x,0,z);g.userData={worker:true,home:new THREE.Vector3(x,0,z),phase:Math.random()*6,torso,headPivot,arms,legs,wrench};scene.add(g);return g;
+}
+// Crew v5.7: no floating name tags; visible procedural workwear and equipment instead.
+function makeWorkerPro(shirt,x,z,roleIndex=0){
+ const g=makeWorker(shirt,x,z);
+ const add=(mesh,parent,pos)=>{mesh.position.set(pos[0],pos[1],pos[2]);mesh.castShadow=true;parent.add(mesh);return mesh;};
+ const torso=g.userData.torso;
+ // High-visibility safety vest with reflective strips.
+ const vestMat=mat([0xffa52b,0x35c985,0x2587e8,0xf0c94a][roleIndex%4],.48,.15);
+ add(new THREE.Mesh(new THREE.BoxGeometry(.39,.34,.25),vestMat),torso,[0,-.015,.13]);
+ const stripMat=new THREE.MeshStandardMaterial({color:0xeaf7ff,metalness:.1,roughness:.3,emissive:0x1d3542,emissiveIntensity:.18});
+ for(const y of [-.08,.06])add(new THREE.Mesh(new THREE.BoxGeometry(.4,.035,.265),stripMat),torso,[0,y,.14]);
+ // Hard hat, clearly visible from the camera.
+ const head=g.children.find(o=>o.type==='Group'&&o.userData===undefined); // head pivot is also reachable from the worker animation data
+ const pivot=g.userData.headPivot;
+ if(pivot){
+   const helmetMat=mat([0xffc928,0xf5f7fa,0xff8a26,0x42d7ce][roleIndex%4],.35,.25);
+   add(new THREE.Mesh(new THREE.SphereGeometry(.215,12,8,0,Math.PI*2,0,Math.PI*.53),helmetMat),pivot,[0,.19,0]);
+   add(new THREE.Mesh(new THREE.BoxGeometry(.42,.045,.24),helmetMat),pivot,[0,.15,.025]);
+ }
+ // Tool belt and a visible pouch make the upgraded crew different in the 3D scene.
+ const beltMat=mat(0x263746,.65,.25);add(new THREE.Mesh(new THREE.BoxGeometry(.39,.085,.27),beltMat),torso,[0,-.25,.03]);
+ add(new THREE.Mesh(new THREE.BoxGeometry(.13,.16,.1),mat(0xe9b44b,.4,.35)),torso,[.2,-.28,.06]);
+ g.userData.roleIndex=roleIndex;
+ return g;
+}
+const workers=Array.from({length:Math.max(2,Math.min(4,state.bays||2))},(_,i)=>makeWorkerPro([0x2f80ed,0x39d48a,0xff922b,0x8c6ed9][i],-4.5+i*3,3.1,i));
+function updateWorkerAnimation(time,dt){
+ const mechanic=workers[0];
+ workers.forEach((w,index)=>{
+  const ud=w.userData;let target=ud.home.clone(),mode='idle';
+  if(active&&index===0){target.set((active.bay||0)*6+1.72,0,.72);mode=holdTask?'repair':'inspect';}
+  else if(active&&index===1){target.set((active.bay||0)*6-2.1,0,1.5);mode='assist';}
+  else {
+   const assignment=[...autoJobs.values()].find(a=>a.workerIndex===index);
+   if(assignment){const bay=assignment.bay;
+    if(assignment.stage==='tools'){target.set((state.bays-1)*3-1.9,0,-2.7);mode='retrieve';}
+    else {target.set(bay*6+(index%2?1.55:-1.55),0,.65+(index*.18));mode='repair';}
+   }
+  }
+  const dx=target.x-w.position.x,dz=target.z-w.position.z,dist=Math.hypot(dx,dz);
+  const walking=dist>.12;
+  const move=Math.min(1,dt*(walking?2.6:7));w.position.x+=dx*move;w.position.z+=dz*move;
+  if(walking)w.rotation.y=Math.atan2(-dx,-dz);else if(mode!=='idle')w.rotation.y=-Math.PI/2;
+  const phase=time*8+ud.phase;
+  ud.legs[0].rotation.x=walking?Math.sin(phase)*.65:Math.sin(time*1.5+ud.phase)*.035;
+  ud.legs[1].rotation.x=walking?Math.sin(phase+Math.PI)*.65:Math.sin(time*1.5+ud.phase+1)*.035;
+  ud.torso.rotation.x=(mode==='repair'||mode==='retrieve')&&!walking?-.24+Math.sin(time*17)*.035:mode==='inspect'&&!walking?-.12+Math.sin(time*2.1)*.025:0;
+  ud.headPivot.rotation.x=(mode==='repair'||mode==='retrieve')&&!walking?-.25+Math.sin(time*8)*.08:mode==='inspect'&&!walking?-.18+Math.sin(time*1.8)*.07:Math.sin(time*1.2+ud.phase)*.035;
+  ud.arms.forEach((a,i)=>{
+   if(walking){a.shoulder.rotation.x=Math.sin(phase+(i?Math.PI:0))*.55;a.shoulder.rotation.z=a.sx*.12;a.elbow.rotation.x=0;}
+   else if(mode==='repair'||mode==='retrieve'){
+    a.shoulder.rotation.x=(i===1?-.95:-.72)+Math.sin(time*19+(i?1:0))*.23;
+    a.shoulder.rotation.z=a.sx*(i===1?.08:.2);a.elbow.rotation.x=-.65+Math.sin(time*19+i)*.18;
+   }else if(mode==='inspect'||mode==='assist'){
+    a.shoulder.rotation.x=(i===1?-.45:-.2)+Math.sin(time*2.5+i)*.08;
+    a.shoulder.rotation.z=a.sx*.12;a.elbow.rotation.x=-.2+Math.sin(time*2+i)*.08;
+   }else{
+    a.shoulder.rotation.x=Math.sin(time*1.3+ud.phase+i)*.08;a.shoulder.rotation.z=a.sx*.18;a.elbow.rotation.x=0;
+   }
+  });
+  ud.wrench.rotation.z=(mode==='repair'||mode==='retrieve')?Math.sin(time*19)*.35:0;
+  w.position.y=walking?Math.abs(Math.sin(phase))*.055:Math.sin(time*2+ud.phase)*.012;
+ });
+}
+
+
+const roadCars=[];
+for(let i=0;i<2;i++){const c=makeCar(i?0xe64b46:0xf0b63d,'sedan');c.scale.setScalar(.62);c.position.set(-20+i*20,.05,16);c.userData.traffic=true;scene.add(c);roadCars.push(c);}
+
+// Waiting customers: visible seated low-poly people with rotating speech bubbles.
+const waitingCustomers=[];
+function makeCustomer(index){
+ const g=new THREE.Group(),skin=mat([0xd9a078,0xf0c7a2,0x9b684b,0xe5b18c][index%4]),shirt=mat([0x8d75d6,0x3c9e9a,0xe2a447,0x477ac0][index%4]),pants=mat(0x344252),hair=mat(0x30251f);
+ const torso=new THREE.Mesh(new THREE.BoxGeometry(.34,.43,.2),shirt);torso.position.y=.78;g.add(torso);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.14,10,8),skin);head.position.set(0,1.1,.015);g.add(head);
+ const hairCap=new THREE.Mesh(new THREE.SphereGeometry(.145,10,6,0,Math.PI*2,0,Math.PI*.5),hair);hairCap.position.set(0,1.15,.005);g.add(hairCap);
+ for(const x of [-.1,.1]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.12,.36,.13),pants);leg.position.set(x,.37,.03);g.add(leg);}
+ const bubbleCanvas=document.createElement('canvas');bubbleCanvas.width=512;bubbleCanvas.height=128;const cx=bubbleCanvas.getContext('2d');
+ function drawBubble(){cx.clearRect(0,0,512,128);cx.fillStyle='#fffdf7';cx.strokeStyle='#31566b';cx.lineWidth=5;cx.beginPath();cx.ellipse(256,61,205,53,0,0,Math.PI*2);cx.fill();cx.stroke();cx.fillStyle='#fffdf7';cx.beginPath();cx.moveTo(235,105);cx.lineTo(220,124);cx.lineTo(265,106);cx.fill();cx.fillStyle='#173348';cx.font='bold 23px system-ui';cx.textAlign='center';cx.textBaseline='middle';const words=customerLines[(Math.floor(performance.now()/5200)+index)%customerLines.length].split(' ');let lines=[''],line=0;for(const w of words){const test=(lines[line]+' '+w).trim();if(cx.measureText(test).width>330&&line<1){lines.push(w);line++;}else lines[line]=test;}lines.slice(0,2).forEach((txt,j)=>cx.fillText(txt,256,48+j*27));}
+ const customerLines=['Xe này sửa lâu không?','Thiếu ghế chờ kìa!','Có phụ tùng mới chưa?','Tôi muốn nâng cấp xe!','Thợ đang lấy dụng cụ…','Gara đông khách quá!','Mua thêm tủ đồ nghề đi!'];drawBubble();
+ const tex=new THREE.CanvasTexture(bubbleCanvas);tex.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));sprite.scale.set(1.45,.72,1);sprite.position.set(0,1.78,0);sprite.userData.isCustomerBubble=true;g.add(sprite);
+ g.userData.refreshBubble=()=>{drawBubble();tex.needsUpdate=true;};g.userData.bubble=sprite;g.userData.customerIndex=index;g.userData.target=null;g.userData.walkClock=2+Math.random()*5;return g;
+}
+const customerLines=['Xe này sửa lâu không?','Thiếu ghế chờ kìa!','Có phụ tùng mới chưa?','Tôi muốn nâng cấp xe!','Thợ đang lấy dụng cụ…','Gara đông khách quá!','Mua thêm tủ đồ nghề đi!'];
+// Permanent waiting benches along the visitor area so customers have visible places to sit.
+const visitorBenches=new THREE.Group();visitorBenches.name='visitorWaitingBenches';
+for(const bx of [-6,-2,2,6]){const wood=mat(0x93643e,.8),leg=mat(0x34495b,.55,.35);const seat=new THREE.Mesh(new THREE.BoxGeometry(1.55,.13,.42),wood);seat.position.set(bx,.55,7.15);seat.castShadow=true;visitorBenches.add(seat);const back=new THREE.Mesh(new THREE.BoxGeometry(1.55,.42,.11),wood);back.position.set(bx,.82,7.34);back.castShadow=true;visitorBenches.add(back);for(const dx of [-.58,.58]){const l=new THREE.Mesh(new THREE.BoxGeometry(.1,.52,.12),leg);l.position.set(bx+dx,.28,7.15);visitorBenches.add(l);}}scene.add(visitorBenches);
+function refreshWaitingCustomers(){
+ const wanted=Math.min(8,Math.max(1,Math.floor((currentLevel?currentLevel():1)/2)+1));
+ while(waitingCustomers.length<wanted){const i=waitingCustomers.length,c=makeCustomer(i);waitingCustomers.push(c);scene.add(c);}
+ while(waitingCustomers.length>wanted){scene.remove(waitingCustomers.pop());}
+ waitingCustomers.forEach((c,i)=>{const lane=Math.floor(i/3),slot=i%3;c.position.set(-8.2+slot*1.5,0,4.8+lane*1.25);c.rotation.y=Math.PI;c.userData.target=null;c.userData.walkClock=2+Math.random()*4;});
+}
+setInterval(()=>{waitingCustomers.forEach(c=>c.userData.refreshBubble&&c.userData.refreshBubble());},5200);
+
+/* Weather cycle + visible rain particles */
+let rainPoints=null,weatherIndex=0,weatherFlashUntil=0;
+const weatherModes=[
+ {id:'sunny',label:'NẮNG',bg:0x9bcde8,fog:0x9bcde8,light:2},
+ {id:'cloud',label:'NHIỀU MÂY',bg:0xa8bfd0,fog:0xa8bfd0,light:1.45},
+ {id:'rain',label:'MƯA',bg:0x718da7,fog:0x718da7,light:1.05},
+ {id:'storm',label:'BÃO',bg:0x35475b,fog:0x35475b,light:.62}
+];
+function makeRain(){
+ if(rainPoints)return;
+ const count=QUALITY==='high'?1200:QUALITY==='medium'?650:220,positions=new Float32Array(count*3);
+ for(let i=0;i<count;i++){positions[i*3]=Math.random()*70-35;positions[i*3+1]=Math.random()*24+2;positions[i*3+2]=Math.random()*60-20;}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+ rainPoints=new THREE.Points(geo,new THREE.PointsMaterial({color:0xdcecff,size:.09,transparent:true,opacity:.68}));
+ scene.add(rainPoints);
+}
+function setWeather(id,quiet=false){
+ const w=weatherModes.find(x=>x.id===id)||weatherModes[0];state.weather=w.id;
+ scene.background=new THREE.Color(w.bg);scene.fog=new THREE.Fog(w.fog,45,100);sun.intensity=w.light;
+ if(w.id==='rain'||w.id==='storm')makeRain();
+ else if(rainPoints){scene.remove(rainPoints);rainPoints.geometry.dispose();rainPoints.material.dispose();rainPoints=null;}
+ let label=document.getElementById('weatherBadge');
+ if(!label){label=document.createElement('div');label.id='weatherBadge';label.style='position:fixed;right:10px;top:104px;z-index:3;background:#102438cc;color:white;border:1px solid #ffffff35;border-radius:10px;padding:6px 9px;font-size:11px;font-weight:900;pointer-events:none';document.body.appendChild(label);}
+ label.textContent=(w.id==='storm'?'🌩️ ':w.id==='rain'?'🌧️ ':w.id==='cloud'?'☁️ ':'☀️ ')+w.label;
+ if(!quiet)toast('Thời tiết: '+w.label);
+}
+setWeather(state.weather,true);
+try{const q=document.getElementById('quality');if(q)q.value=QUALITY;document.body.classList.add('quality-'+QUALITY);}catch(e){}
+setInterval(()=>{if(typeof stormBoss!=='undefined'&&stormBoss.phase!=='idle')return;weatherIndex=(weatherIndex+1)%weatherModes.length;setWeather(weatherModes[weatherIndex].id);},90000);
+
+/* V7.1: Boss storms damage real vehicle meshes and rebuilding restores them. */
+const stormBoss={phase:'idle',stage:Math.max(0,Number(state.bossStormStage)||0),started:false,warningAt:0,clouds:null,wind:null,tornado:null,debris:[],panel:null,baseBg:0x9bcde8,baseFog:0x9bcde8,baseLight:2};
+function buildBossStormClouds(){
+ if(stormBoss.clouds)return;
+ const g=new THREE.Group();g.name='bossStormClouds';
+ for(let i=0;i<23;i++){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(2.2+Math.random()*2.7,8,6),new THREE.MeshStandardMaterial({color:0x25313f,roughness:1,transparent:true,opacity:.88}));
+  m.position.set(-28+(i%8)*8,14+Math.random()*4,-12+Math.floor(i/8)*8);m.scale.y=.42+Math.random()*.35;g.add(m);
+ }
+ g.visible=false;scene.add(g);stormBoss.clouds=g;
+ const count=QUALITY==='high'?300:QUALITY==='medium'?160:70,pos=new Float32Array(count*3);
+ for(let i=0;i<count;i++){pos[i*3]=Math.random()*64-32;pos[i*3+1]=Math.random()*12+.2;pos[i*3+2]=Math.random()*36-8;}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+ stormBoss.wind=new THREE.Points(geo,new THREE.PointsMaterial({color:0xc8d4df,size:.13,transparent:true,opacity:.0}));scene.add(stormBoss.wind);
+}
+
+/* V7.0: visible tornado funnel + audible rain/wind during boss storm. */
+function buildVisibleTornado(){
+ if(stormBoss.tornado)return;
+ const g=new THREE.Group();g.name='bossTornadoFunnel';
+ const funnelMat=new THREE.MeshStandardMaterial({color:0x687786,roughness:1,transparent:true,opacity:.9,emissive:0x202830,emissiveIntensity:.25});
+ const dustMat=new THREE.MeshStandardMaterial({color:0x9ba7ae,roughness:1,transparent:true,opacity:.55});
+ // Wide debris/dust base and a segmented tapered funnel that is unmistakable from the game camera.
+ for(let i=0;i<7;i++){
+  const y=.45+i*.72,rb=2.7-i*.29,rt=Math.max(.22,rb-.43);
+  const seg=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,.86,14,1,true),funnelMat.clone());
+  seg.position.set(0,y,0);seg.rotation.y=i*.19;seg.userData.tornadoSeg=i;g.add(seg);
+ }
+ const base=new THREE.Mesh(new THREE.TorusGeometry(2.5,.16,6,24),dustMat);
+ base.rotation.x=Math.PI/2;base.position.y=.18;g.add(base);
+ for(let i=0;i<18;i++){
+  const peb=new THREE.Mesh(new THREE.BoxGeometry(.12+Math.random()*.2,.12+Math.random()*.22,.12+Math.random()*.2),
+   new THREE.MeshStandardMaterial({color:[0x8b9298,0x665f55,0xb7b7ad][i%3],roughness:1}));
+  const a=Math.random()*Math.PI*2,r=1.2+Math.random()*2.2;
+  peb.position.set(Math.cos(a)*r,.2+Math.random()*4,Math.sin(a)*r);peb.userData.spin=Math.random()*6;g.add(peb);
+ }
+ g.scale.set(1.45,1.35,1.45);g.position.set(0,0,5);g.visible=false;scene.add(g);stormBoss.tornado=g;
+}
+let bossRainSource=null,bossRainGain=null,bossRainBuffer=null;
+function startBossRainAudio(){
+ if(!soundOn)return;
+ try{
+  ensureAudio();if(!audioCtx||!masterGain)return;
+  if(!bossRainBuffer){const len=Math.floor(audioCtx.sampleRate*2);bossRainBuffer=audioCtx.createBuffer(1,len,audioCtx.sampleRate);const d=bossRainBuffer.getChannelData(0);let last=0;for(let i=0;i<len;i++){const white=Math.random()*2-1;last=last*.72+white*.28;d[i]=white*.65+last*.35;}}
+  if(!bossRainSource){bossRainSource=audioCtx.createBufferSource();bossRainSource.buffer=bossRainBuffer;bossRainSource.loop=true;const filter=audioCtx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=1800;bossRainGain=audioCtx.createGain();bossRainGain.gain.value=0;bossRainSource.connect(filter);filter.connect(bossRainGain);bossRainGain.connect(masterGain);bossRainSource.start();}
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  bossRainGain.gain.cancelScheduledValues(audioCtx.currentTime);bossRainGain.gain.setTargetAtTime(.42,audioCtx.currentTime,.35);
+  if(ambienceGain)ambienceGain.gain.setTargetAtTime(.10,audioCtx.currentTime,1);
+ }catch(e){console.warn('Storm audio unavailable',e);}
+}
+function stopBossRainAudio(){
+ try{if(audioCtx&&bossRainGain)bossRainGain.gain.setTargetAtTime(0,audioCtx.currentTime,.5);if(ambienceGain)ambienceGain.gain.setTargetAtTime(.025,audioCtx.currentTime,1);}catch(e){}
+}
+
+function stormNotice(title,body,buttonText,onclick){
+ let el=document.getElementById('bossStormNotice');if(!el){el=document.createElement('div');el.id='bossStormNotice';el.style.cssText='position:fixed;z-index:80;left:5%;right:5%;top:27%;max-width:540px;margin:auto;background:linear-gradient(145deg,#192c40f5,#0b1725f5);color:#eef7ff;border:2px solid #f4a64a;border-radius:20px;box-shadow:0 18px 60px #0009;padding:20px;font:600 15px system-ui;text-align:center;';document.body.appendChild(el);}
+ el.innerHTML=`<div style="font-size:27px;font-weight:950;color:#ffc16c;margin-bottom:10px">${title}</div><div style="line-height:1.55;color:#e3edf7;margin-bottom:16px">${body}</div>${buttonText?`<button id="bossStormAction" style="width:100%;border:0;border-radius:13px;padding:14px;background:linear-gradient(120deg,#8af0b0,#35b979);color:#123528;font-size:16px;font-weight:950">${buttonText}</button>`:''}`;
+ el.style.display='block';if(buttonText)document.getElementById('bossStormAction').onclick=onclick;
+}
+function stormCustomersFlee(){
+ waitingCustomers.forEach((c,i)=>{c.userData.target=new THREE.Vector3((i%2?1:-1)*(17+i),0,17+Math.random()*4);c.userData.walkClock=30;c.userData.fleeing=true;c.userData.refreshBubble&&c.userData.refreshBubble();});
+ walkers.forEach((w,i)=>{w.userData.stormFlee=true;w.userData.fleeDir=i%2?1:-1;});
+}
+function stormCustomersReturn(){
+ waitingCustomers.forEach(c=>{c.userData.fleeing=false;c.userData.target=null;c.userData.walkClock=1+Math.random()*3;});walkers.forEach(w=>w.userData.stormFlee=false);refreshWaitingCustomers();
+}
+window.startStormTest=function(){
+ try{ensureAudio();if(masterGain&&soundOn)masterGain.gain.value=.8;}catch(e){}
+ if(stormBoss.phase!=='idle'){stormNotice('🌪️ BÃO ĐANG DIỄN RA','Đợi cơn bão hiện tại kết thúc rồi hãy gọi bão tiếp.','ĐÓNG',()=>{const n=document.getElementById('bossStormNotice');if(n)n.style.display='none';});return;}
+ // Manual test can replay storms regardless of saved progression, useful for checking visual/audio effects.
+ if(stormBoss.stage>=2){stormBoss.stage=0;state.bossStormStage=0;stormBoss.started=false;saveSilent();}
+ beginBossStorm();
+};
+function beginBossStorm(){
+ if(stormBoss.phase!=='idle'||stormBoss.stage>=2)return;
+ stormBoss.phase='warning';stormBoss.warningAt=performance.now();buildBossStormClouds();stormBoss.clouds.visible=true;buildVisibleTornado();stormBoss.tornado.visible=true;stormBoss.tornado.position.set(-17,0,5);makeRain();state.weather='storm';if(stormBoss.wind&&stormBoss.wind.material)stormBoss.wind.material.opacity=.55;startBossRainAudio();
+ scene.background=new THREE.Color(0x596879);scene.fog=new THREE.Fog(0x596879,20,75);if(sun)sun.intensity=.52;
+ stormCustomersFlee();if(soundOn){startBossRainAudio();setTimeout(()=>{if(stormBoss.phase!=='idle')try{tone(72,.75,'sawtooth',.35);tone(48,1.0,'triangle',.28);}catch(e){}},250);}toast('⚠️ BÃO LỚN ĐANG TIẾN VÀO! Khách đang sơ tán.');
+ stormNotice('🌩️ CẢNH BÁO BÃO LỚN','Mây đang tối dần, gió giật mạnh! Khách hàng chạy khỏi gara. Hãy chuẩn bị thiệt hại và kế hoạch xây dựng lại.','ĐÃ HIỂU',()=>{const e=document.getElementById('bossStormNotice');if(e)e.style.display='none';});
+ setTimeout(()=>{if(stormBoss.phase==='warning')hitBossStorm();},18000);
+}
+function hitBossStorm(){
+ if(stormBoss.phase!=='warning')return;stormBoss.phase='damage';stormBoss.stage++;state.bossStormStage=stormBoss.stage;
+ const damageCash=Math.min(Math.max(700,Math.round((state.cash||0)*.16)),Math.max(0,state.cash||0));state.cash=Math.max(0,state.cash-damageCash);
+ const bayDamage=Math.min(Math.max(1,Math.ceil((state.bays||1)/2)),state.bays||1);state.bossDamagedBays=bayDamage;
+ // V7.1: storm damage affects the actual cars in the bays, not only decorative floor markers.
+ let damagedCars=0;
+ if(carsByBay&&typeof carsByBay.forEach==='function')carsByBay.forEach((car,bay)=>{
+   if(!car||damagedCars>=Math.max(1,bayDamage))return;
+   try{addStormDamage(car,(stormBoss.stage+Number(bay))%4);car.userData.stormRepairRequired=true;car.userData.stormDamageStage=stormBoss.stage;damagedCars++;}catch(e){console.warn('Could not damage vehicle',e);}
+ });
+ if(typeof addReputation==='function')addReputation(-Math.min(35,12+bayDamage*4));
+ // Physical debris and red damaged-bay markers make the destruction visible in the 3D garage.
+ for(let i=0;i<18;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(.18+Math.random()*.45,.08+Math.random()*.2,.16+Math.random()*.42),new THREE.MeshStandardMaterial({color:[0x6d7782,0xb9c2c9,0xc85c46,0x344452][i%4],roughness:.9}));m.position.set(-8+Math.random()*26,.12+Math.random()*.2,-3+Math.random()*7);m.rotation.set(Math.random(),Math.random()*3,Math.random());scene.add(m);stormBoss.debris.push(m);}
+ for(let i=0;i<bayDamage;i++){const bay=(state.bays-1)-i;const marker=new THREE.Mesh(new THREE.BoxGeometry(2.3,.06,2.8),new THREE.MeshStandardMaterial({color:0xb64035,transparent:true,opacity:.65}));marker.position.set(bay*6,.05,.2);scene.add(marker);stormBoss.debris.push(marker);}
+ updateHUD();saveSilent();
+ stormNotice(`🌪️ ĐỢT BÃO ${stormBoss.stage}/2 — GARA BỊ TÀN PHÁ`,`Gió lốc làm hư ${bayDamage} khu vực, gây hỏng ${damagedCars} xe thật trong xưởng và giảm danh tiếng. Thiệt hại tiền mặt: $${damageCash.toLocaleString()}. Chi phí dọn dẹp & xây lại: $${Math.max(1200,Math.round(1800+state.bays*650)).toLocaleString()}.`,`DỌN DẸP & XÂY LẠI · $${Math.max(1200,Math.round(1800+state.bays*650)).toLocaleString()}`,rebuildAfterStorm);
+}
+function rebuildAfterStorm(){
+ const cost=Math.max(1200,Math.round(1800+state.bays*650));if(state.cash<cost){stormNotice('🏗️ CHƯA ĐỦ KINH PHÍ',`Cần $${cost.toLocaleString()} để dọn dẹp và sửa lại các bay. Hoàn thành hợp đồng để kiếm thêm tiền rồi quay lại.`,`ĐÓNG`,()=>{const e=document.getElementById('bossStormNotice');if(e)e.style.display='none';});return;}
+ state.cash-=cost;state.bossDamagedBays=0;
+ // Rebuild also restores damaged cars so the visual damage has a clear gameplay loop.
+ if(carsByBay&&typeof carsByBay.forEach==='function')carsByBay.forEach(car=>{if(car&&car.userData&&car.userData.stormRepairRequired){try{restoreStormCar(car);}catch(e){}delete car.userData.stormRepairRequired;delete car.userData.stormDamageStage;}});
+ stormBoss.debris.forEach(o=>{scene.remove(o);o.geometry?.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});stormBoss.debris=[];
+ if(stormBoss.clouds)stormBoss.clouds.visible=false;if(stormBoss.tornado)stormBoss.tornado.visible=false;if(stormBoss.wind)stormBoss.wind.material.opacity=0;stopBossRainAudio();if(rainPoints){scene.remove(rainPoints);rainPoints.geometry.dispose();rainPoints.material.dispose();rainPoints=null;}
+ scene.background=new THREE.Color(0x9bcde8);scene.fog=new THREE.Fog(0x9bcde8,45,100);if(sun)sun.intensity=2;stormBoss.phase='idle';state.weather='sunny';if(rainPoints){scene.remove(rainPoints);rainPoints.geometry.dispose();rainPoints.material.dispose();rainPoints=null;}const wb=document.getElementById('weatherBadge');if(wb)wb.textContent='☀️ NẮNG';stormCustomersReturn();updateHUD();saveSilent();
+ const e=document.getElementById('bossStormNotice');if(e)e.style.display='none';toast('🔨 Gara đã được xây dựng lại! Đội thợ quay lại làm việc.');
+ if(stormBoss.stage<2){setTimeout(()=>{if(currentLevel()>=30&&stormBoss.stage===1)beginBossStorm();},45000);}else{stormNotice('🏆 ÔNG TRÙM GARA','Bạn đã vượt qua cả hai đợt bão phá hoại! Giờ đây hãy tiếp tục mở rộng đế chế gara.','TIẾP TỤC KINH DOANH',()=>{const n=document.getElementById('bossStormNotice');if(n)n.style.display='none';});}
+}
+function updateBossStorm(now,dt){
+ if(currentLevel()>=30&&stormBoss.stage<2&&!stormBoss.started){stormBoss.started=true;setTimeout(()=>{if(currentLevel()>=30&&stormBoss.stage<2)beginBossStorm();},12000);}
+ if(stormBoss.phase==='warning'&&stormBoss.clouds){const p=Math.max(0,Math.min(1,(now-stormBoss.warningAt)/18000));stormBoss.clouds.children.forEach((c,i)=>{if(c&&c.position){c.position.x+=Math.sin(now*.0003+i)*dt*.12;c.position.z+=dt*.08;}});if(scene.background&&scene.background.isColor)scene.background.setRGB(.35-p*.13,.42-p*.15,.50-p*.17);else scene.background=new THREE.Color(.35-p*.13,.42-p*.15,.50-p*.17);if(sun)sun.intensity=.52-p*.12;if(now-(stormBoss.lastFlash||0)>4800+Math.random()*3500){stormBoss.lastFlash=now;scene.background=new THREE.Color(0xd8e3ec);setTimeout(()=>{if(stormBoss.phase==='warning')scene.background=new THREE.Color(0x35475b);},100);if(navigator.vibrate)try{navigator.vibrate([70,40,100]);}catch(e){}}}
+ if(stormBoss.tornado&&stormBoss.phase!=='idle'){stormBoss.tornado.rotation.y+=dt*1.8;const stormProgress=Math.max(0,Math.min(1,(now-stormBoss.warningAt)/18000));stormBoss.tornado.position.x=-17+stormProgress*34;stormBoss.tornado.position.z=5+Math.sin(now*.0017)*1.0;stormBoss.tornado.children.forEach((o,i)=>{if(o.userData.tornadoSeg!==undefined)o.rotation.y+=dt*(1.2+i*.18);else if(o.userData.spin!==undefined){o.userData.spin+=dt*3.5;const r=Math.hypot(o.position.x,o.position.z);o.position.x=Math.cos(o.userData.spin)*r;o.position.z=Math.sin(o.userData.spin)*r;o.position.y=.2+((o.position.y+dt*2.2)%5);}});}if(stormBoss.wind&&stormBoss.phase!=='idle'){const a=stormBoss.wind.geometry.attributes.position;for(let i=0;i<a.count;i++){a.array[i*3]+=.24;if(a.array[i*3]>34)a.array[i*3]=-34;a.array[i*3+1]-=.03;if(a.array[i*3+1]<.1)a.array[i*3+1]=10+Math.random()*3;}a.needsUpdate=true;}
+}
+
+/* Pedestrians on the sidewalk */
+const walkers=[];
+for(let i=0;i<6;i++){
+ const w=new THREE.Group(),shirt=mat([0xf97316,0x2563eb,0x16a34a,0x9333ea,0xfacc15,0xef4444][i]),skin=mat(0xffd2a1),pants=mat(0x24384a);
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.32,3,6),shirt);body.position.y=.53;w.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),skin);head.position.y=.88;w.add(head);
+ for(const sx of [-1,1]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.07,.28,.08),pants);leg.position.set(sx*.055,.22,0);w.add(leg);}
+ w.position.set(-22+i*7,0,19+(i%2)*1.1);w.userData={phase:i*1.7};scene.add(w);walkers.push(w);
+}
+
+/* Đảm bảo trạng thái cũ có số bay phù hợp với xe trưng bày. */
+spawnJob();spawnJob();renderJobs();refreshWaitingCustomers();refreshBusinessUI();updateObjective();
+let lastAnimTime=performance.now();
+function animate(){requestAnimationFrame(animate);const now=performance.now(),t=now*.001,dt=Math.min(.05,(now-lastAnimTime)/1000);lastAnimTime=now;
+ try{updateWorkerAnimation(t,dt);}catch(e){}try{updateInkParticles(now,dt);}catch(e){}try{updateBossStorm(now,dt);}catch(e){console.warn('Storm update recovered',e);}if(proposer){proposer.position.x=Math.min(0,proposer.position.x+dt*3.2);proposer.position.z=18;}
+ carsByBay.forEach(c=>{const a=c.userData.arrival;if(a){const p=Math.min(1,(now-a.start)/a.duration),ease=1-Math.pow(1-p,3);c.position.z=a.from*(1-ease);if(p>=1){c.position.z=0;delete c.userData.arrival;toast('Xe đã vào xưởng · thợ đang kiểm tra');}}});
+ waitingCustomers.forEach((c,i)=>{const ud=c.userData;ud.walkClock-=dt;if(!ud.fleeing&&(!ud.target||ud.walkClock<=0||Math.hypot(c.position.x-ud.target.x,c.position.z-ud.target.z)<.22)){const spots=[[-6,7.0],[-4.7,5.0],[-2,7.0],[0,5.0],[2,7.0],[4.8,5.0],[6,7.0],[-3.4,3.0],[3.5,3.2]];const q=spots[(Math.floor(Math.random()*spots.length)+i)%spots.length];ud.target=new THREE.Vector3(q[0],0,q[1]);ud.walkClock=4+Math.random()*6;}if(!ud.target)ud.target=new THREE.Vector3(c.position.x,0,c.position.z);const dx=ud.target.x-c.position.x,dz=ud.target.z-c.position.z,dist=Math.hypot(dx,dz);if(dist>.2){const step=Math.min(dist,dt*(ud.fleeing?3.1:.38+(i%3)*.08));c.position.x+=dx/dist*step;c.position.z+=dz/dist*step;c.rotation.y=Math.atan2(-dx,-dz);c.children.slice(0,1).forEach(o=>o.rotation.z=Math.sin(t*7+i)*.035);}else{c.rotation.y=Math.PI;c.position.y=Math.abs(Math.sin(t*2+i))*.015;const seated=ud.target&&ud.target.z>6.5;if(seated){const torso=c.children[0];if(torso)torso.rotation.x=.12;for(let k=3;k<=4;k++){if(c.children[k])c.children[k].rotation.x=-.45;}}else{if(c.children[0])c.children[0].rotation.x=0;for(let k=3;k<=4;k++){if(c.children[k])c.children[k].rotation.x=0;}}}});roadCars.forEach((c,i)=>{c.position.x+=i===0?.055:-.045;if(c.position.x>24)c.position.x=-24;if(c.position.x< -24)c.position.x=24;c.position.z=16+Math.sin(t*.7+i)*.25;});walkers.forEach((w,i)=>{w.position.x+=.012+(i%3)*.004;if(w.position.x>24)w.position.x=-24;w.position.z=19+(i%2)*1.1+Math.sin(t*1.4+w.userData.phase)*.12;w.rotation.y=0;});if(rainPoints){const a=rainPoints.geometry.attributes.position;for(let i=0;i<a.count;i++){a.array[i*3+1]-=.42;if(a.array[i*3+1]<0){a.array[i*3+1]=24+Math.random()*4;a.array[i*3]=Math.random()*70-35;}}a.needsUpdate=true;if(state.weather==='storm'&&Math.random()<.004){scene.background.set(0xdbe9f5);weatherFlashUntil=now+90;}if(weatherFlashUntil&&now>weatherFlashUntil){scene.background.set(weatherModes.find(x=>x.id===state.weather)?.bg||0x35475b);weatherFlashUntil=0;}}controls.update();renderer.render(scene,camera);}window.__garageGameStarted=true;animate();
+setInterval(saveSilent,8000);
+addEventListener('contextmenu',e=>{if(e.target.closest('#bottomJob,.holdBtn'))e.preventDefault();});
+</script>
+</body>
+</html>
